@@ -1,0 +1,264 @@
+/* Login / Registro. Comparten AuthShell, por eso se ven como un mismo sistema. */
+
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface-muted);
+}
+
+/* ---------- Panel de marca (solo escritorio) ---------- */
+
+.auth-aside {
+  display: none;
+}
+
+.auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.auth-brand__mark {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--color-on-ink);
+  background-color: var(--color-ink);
+  border-radius: 0.625rem;
+}
+
+.auth-aside__title {
+  max-width: 20ch;
+  margin: 0 0 1rem;
+  font-size: clamp(1.75rem, 2.6vw, 2.375rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.auth-aside__lead {
+  max-width: 30rem;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #d1d5db;
+}
+.auth-points {
+  display: grid;
+  gap: 0.875rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.auth-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #e5e7eb;
+}
+.auth-points svg {
+  flex: none;
+  margin-top: 0.125rem;
+  color: #93c5fd;
+}
+
+@media (min-width: 60rem) {
+  .auth-page {
+    grid-template-columns: minmax(24rem, 5fr) 7fr;
+  }
+  .auth-aside {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3rem;
+    padding: 3rem;
+    color: var(--color-on-ink);
+    background-color: var(--color-ink);
+  }
+  .auth-aside .auth-brand__mark {
+    color: var(--color-ink);
+    background-color: var(--color-surface);
+  }
+  .auth-brand--compact {
+    display: none;
+  }
+}
+
+/* ---------- Columna del formulario ---------- */
+
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1rem 2.5rem;
+}
+@media (min-width: 40rem) {
+  .auth-main {
+    padding: 3rem 2rem;
+  }
+}
+
+.auth-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 26.5rem;
+  padding: 1.5rem 1.25rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.auth-card--wide {
+  max-width: 34rem;
+}
+@media (min-width: 40rem) {
+  .auth-card {
+    padding: 2rem;
+  }
+}
+
+.auth-title {
+  margin: 0 0 0.375rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+.auth-subtitle {
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Formularios ---------- */
+
+.auth-form,
+.auth-methods {
+  display: grid;
+  gap: 1.25rem;
+}
+.auth-methods {
+  gap: 0.75rem;
+}
+
+.auth-section {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.auth-section + .auth-section {
+  padding-top: 0.5rem;
+}
+.auth-section__title {
+  margin-bottom: 0.75rem;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.auth-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+.auth-row--doc {
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+}
+@media (min-width: 30rem) {
+  .auth-row--pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .auth-row--phone {
+    grid-template-columns: 13rem minmax(0, 1fr);
+  }
+}
+
+.auth-forgot {
+  font-size: 0.8125rem;
+}
+
+.auth-switch {
+  margin: 1.5rem 0 0;
+  padding-top: 1.25rem;
+  font-size: 0.9375rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* ---------- Fortaleza de contraseña ---------- */
+
+.auth-strength {
+  display: grid;
+  gap: 0.375rem;
+}
+.auth-strength__bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+}
+.auth-strength__bar {
+  height: 0.25rem;
+  background-color: var(--color-border-subtle);
+  border-radius: 999px;
+  transition: background-color 0.15s ease;
+}
+.auth-strength__bar.is-on {
+  background-color: var(--strength-color);
+}
+.auth-strength__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--strength-text);
+}
+
+/* ---------- Registro exitoso ---------- */
+
+.auth-success {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  text-align: center;
+}
+.auth-success__icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-success);
+  background-color: var(--color-success-soft);
+  border-radius: 50%;
+}
+.auth-success__title {
+  margin: 0.25rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+.auth-success__text {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.auth-success__email {
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}

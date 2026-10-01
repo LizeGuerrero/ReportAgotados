@@ -1,0 +1,59 @@
+/*
+ * Tokens de diseño. Única fuente de verdad para colores, radios, sombras y
+ * tamaños. Los valores base son los que el proyecto ya usaba (#111827 botón,
+ * #2563eb links, #d1d5db bordes, #6b7280 texto secundario); se les agregó
+ * escala de superficies y estados para no repetir valores sueltos.
+ */
+:root {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Texto */
+  --color-text: #111827;
+  --color-text-muted: #4b5563;   /* 7.5:1 sobre blanco */
+  --color-text-subtle: #6b7280;  /* 4.8:1 sobre blanco (mínimo AA) */
+  --color-on-ink: #ffffff;
+
+  /* Superficies y bordes */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;
+  --color-surface-hover: #f3f4f6;
+  --color-border: #d1d5db;
+  --color-border-strong: #9ca3af;
+  --color-border-subtle: #e5e7eb;
+
+  /* Acción principal (el botón oscuro que ya tenía el proyecto) */
+  --color-ink: #111827;
+  --color-ink-hover: #1f2937;
+
+  /* Acento: links, foco, selección */
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-soft: #eff6ff;
+  --color-accent-border: #bfdbfe;
+
+  /* Estados (el texto usa tonos 700-800 para cumplir contraste AA sobre su fondo suave) */
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-success: #166534;
+  --color-success-soft: #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-warning: #92400e;
+  --color-warning-soft: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-violet: #5b21b6;
+  --color-violet-soft: #f5f3ff;
+  --color-violet-border: #ddd6fe;
+
+  /* Forma */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-sm: 0 1px 2px rgb(17 24 39 / 0.06);
+  --shadow-md: 0 8px 24px rgb(17 24 39 / 0.1);
+  --focus-ring: 0 0 0 3px rgb(37 99 235 / 0.35);
+
+  /* Tamaños de control: 44px cumple el objetivo táctil recomendado */
+  --control-h: 2.75rem;
+  --control-h-sm: 2rem;
+}

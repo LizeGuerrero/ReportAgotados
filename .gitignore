@@ -1,0 +1,39 @@
+# Dependencias
+node_modules/
+.npm/
+
+# Next.js
+.next/
+out/
+
+# Entornos y secretos
+.env
+.env.*
+!.env.local.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Backups y SQL sensibles
+backups/
+backups1/
+*.sql
+sql/
+
+# Archivos de compilación
+coverage/
+.cache/
+
+dist/
+build/
+
+# Git
+.git/
+supabase/.temp/

@@ -1,0 +1,520 @@
+/* Reporte de agotados. Pedidos NO usa estas clases (sigue con su estilo actual). */
+
+.ag-page {
+  padding: 1.25rem 1rem 2rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+}
+@media (min-width: 48rem) {
+  .ag-page {
+    padding: 1.75rem 1.5rem 2.5rem;
+  }
+}
+
+.ag-head {
+  margin: 0 0 1.25rem;
+}
+.ag-title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+.ag-lead {
+  margin: 0.25rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Barra de herramientas ---------- */
+
+.ag-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.ag-toolbar__filters {
+  display: flex;
+  flex: 1 1 32rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ag-search {
+  position: relative;
+  flex: 1 1 16rem;
+  max-width: 26rem;
+}
+.ag-search .ui-input {
+  padding-left: 2.5rem;
+}
+.ag-search__icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-text-subtle);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.ag-popover-wrap {
+  position: relative;
+}
+.ag-popover {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  z-index: 30;
+  box-sizing: border-box;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.ag-popover fieldset {
+  min-width: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+.ag-popover legend {
+  margin-bottom: 0.25rem;
+  padding: 0;
+  font-weight: 700;
+}
+.ag-popover label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3125rem 0;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.ag-popover input {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0.125rem 0 0;
+  accent-color: var(--color-ink);
+}
+
+.ag-alert {
+  margin-bottom: 0.75rem;
+}
+
+/* ---------- Herramientas de vista y copiado + resumen ---------- */
+
+.ag-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+.ag-tools__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ag-tools__sep {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.25rem 0.125rem;
+  background-color: var(--color-border);
+}
+
+.ag-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  min-height: 1.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+.ag-summary strong {
+  color: var(--color-text);
+}
+
+/* Botón de filtro/orden activado (aria-pressed): mismo acento que la selección de celdas */
+.ag-toggle[aria-pressed="true"] {
+  color: var(--color-accent-hover);
+  background-color: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+/* ---------- Tabla ---------- */
+
+.ag-tablewrap {
+  scroll-padding-top: 4.5rem; /* al mover la selección con el teclado, no queda tapada por el encabezado fijo */
+  min-height: 14rem;
+  max-height: calc(100dvh - 19rem);
+  overflow: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+.ag-tablewrap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.ag-tablewrap.is-loading tbody {
+  opacity: 0.55;
+}
+
+/* Layout fijo: los anchos los manda <colgroup>, así se pueden cambiar arrastrando. */
+.ag-table {
+  --ag-band-h: 2rem;
+  table-layout: fixed;
+  width: max(100%, var(--ag-ancho, 78rem));
+  font-size: 0.875rem;
+  line-height: 1.4;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ag-table th,
+.ag-table td {
+  box-sizing: border-box;
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.ag-table .ui-badge {
+  max-width: 100%;
+  white-space: normal;
+}
+.ag-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ag-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-muted);
+  border-bottom-color: var(--color-border);
+}
+.ag-table thead th.ag-th--sort,
+.ag-table thead th.ag-th--grupo-plegado,
+.ag-table thead th.ag-band {
+  padding: 0;
+}
+/* Segunda fila del encabezado: queda pegada justo debajo de la banda de grupos */
+.ag-table thead th.ag-th--sub {
+  top: var(--ag-band-h);
+}
+.ag-th__label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ag-table thead th[aria-sort="ascending"],
+.ag-table thead th[aria-sort="descending"] {
+  color: var(--color-text);
+  background-color: var(--color-surface-hover);
+}
+
+/* Encabezado ordenable, al estilo Excel */
+.ag-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  letter-spacing: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.ag-sort:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface-hover);
+}
+.ag-sort:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.ag-sort__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ag-sort__icon {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: currentColor;
+}
+.ag-sort__up,
+.ag-sort__down {
+  opacity: 0.3;
+}
+.ag-sort:hover .ag-sort__up,
+.ag-sort:hover .ag-sort__down {
+  opacity: 0.55;
+}
+th[aria-sort="ascending"] .ag-sort__up,
+th[aria-sort="descending"] .ag-sort__down {
+  opacity: 1;
+}
+
+.ag-table tbody tr:hover td {
+  background-color: var(--color-surface-muted);
+}
+.ag-row--activo td {
+  background-color: #f8fbff;
+}
+
+/* ---------- Selección de celdas (arrastrar como en Excel) ---------- */
+
+/* El texto de las celdas no se subraya al arrastrar; los campos editables sí conservan su selección de texto */
+.ag-table tbody td {
+  cursor: cell;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.ag-table tbody td input,
+.ag-table tbody td textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.ag-table tbody tr td.ag-sel {
+  position: relative;
+  background-color: var(--color-accent-soft);
+}
+.ag-table tbody tr td.ag-sel--activa {
+  background-color: var(--color-surface);
+}
+/* Un solo marco alrededor del rango: cada celda dibuja únicamente el lado que le toca */
+.ag-table tbody td.ag-sel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 0 solid var(--color-accent);
+}
+.ag-table tbody td.ag-sel--t::after {
+  border-top-width: 2px;
+}
+.ag-table tbody td.ag-sel--b::after {
+  border-bottom-width: 2px;
+}
+.ag-table tbody td.ag-sel--l::after {
+  border-left-width: 2px;
+}
+.ag-table tbody td.ag-sel--r::after {
+  border-right-width: 2px;
+}
+
+/* Columnas */
+.ag-col-num {
+  font-variant-numeric: tabular-nums;
+}
+.ag-col-nombre {
+  font-weight: 600;
+}
+.ag-col-accion {
+  white-space: nowrap;
+}
+
+/* ---------- Grupos de columnas (banda superior) ---------- */
+
+.ag-band {
+  height: var(--ag-band-h);
+  color: var(--color-accent-hover);
+  background-color: var(--color-accent-soft);
+  border-bottom-color: var(--color-accent-border);
+  border-left: 1px solid var(--color-accent-border);
+}
+.ag-table thead th.ag-band,
+.ag-table thead th.ag-th--grupo-plegado {
+  color: var(--color-accent-hover);
+  background-color: var(--color-accent-soft);
+}
+.ag-table thead th.ag-th--grupo-plegado {
+  border-left: 1px solid var(--color-accent-border);
+}
+.ag-band__btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  height: 100%;
+  min-height: var(--ag-band-h);
+  padding: 0 0.75rem;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.ag-band__btn:hover {
+  background-color: rgb(37 99 235 / 0.08);
+}
+.ag-band__btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.ag-band__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ag-band__chev {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.15s ease;
+}
+.ag-band__btn[aria-expanded="false"] .ag-band__chev {
+  transform: rotate(-90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ag-band__chev {
+    transition: none;
+  }
+}
+
+/* ---------- Tiradores de tamaño (columna y fila) ---------- */
+
+.ag-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 0.5rem;
+  cursor: col-resize;
+  touch-action: none;
+}
+.ag-resizer::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 2px;
+  bottom: 20%;
+  width: 2px;
+  background-color: transparent;
+  border-radius: 1px;
+}
+.ag-resizer:hover::after,
+.ag-resizer:focus-visible::after {
+  background-color: var(--color-accent);
+}
+.ag-resizer:focus-visible {
+  outline: none;
+}
+
+.ag-table td.ag-rowhead {
+  position: relative;
+}
+.ag-rowresizer {
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  left: 0;
+  z-index: 1;
+  height: 0.4375rem;
+  cursor: row-resize;
+  touch-action: none;
+}
+.ag-rowresizer:hover {
+  background-color: rgb(37 99 235 / 0.55);
+}
+
+.ag-qty {
+  width: 5.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ag-note {
+  width: 100%;
+}
+
+.ag-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Paginación ---------- */
+
+.ag-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Aviso (copiado, errores) ---------- */
+
+.ag-toast {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  z-index: 50;
+  box-sizing: border-box;
+  max-width: calc(100vw - 2rem);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-on-ink);
+  background-color: var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transform: translateX(-50%);
+}
+.ag-toast--error {
+  background-color: var(--color-danger);
+}
+
+/* ---------- Móvil: la barra de herramientas ocupa todo el ancho ---------- */
+
+@media (max-width: 40rem) {
+  .ag-toolbar__filters {
+    flex: 1 1 100%;
+  }
+  .ag-search,
+  .ui-combo {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .ag-tools__buttons .ui-btn {
+    flex: 1 1 auto;
+  }
+  .ag-tools__sep {
+    display: none;
+  }
+  .ag-tablewrap {
+    max-height: calc(100dvh - 24rem);
+  }
+}
