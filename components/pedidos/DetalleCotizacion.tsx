@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { useTiempoReal } from '@/components/useTiempoReal';
 import {
-  boton, campo, celda, ESTADOS, fecha, pesos, RESPUESTAS, textoCajas, type Pedido,
+  boton, campo, celda, ESTADOS, fecha, idVisible, pesos, RESPUESTAS, TABLAS_PEDIDOS, textoCajas,
+  textoUltimaOrden, type Pedido, type SedePedido,
 } from '@/components/pedidos/comun';
 
 interface Cotizacion {
@@ -72,6 +74,14 @@ export default function DetalleCotizacion({
     cargar();
   }, [cargar]);
 
+  // Si otro comprador registra un precio, elige ganador o cambia una respuesta, aquí se ve sin recargar.
+  // Cada fila de cotización se reinicia solo si SU cotización cambió (ver la key más abajo), así que lo
+  // que alguien esté escribiendo en otra fila no se pierde.
+  useTiempoReal(supabase, organizacionId, TABLAS_PEDIDOS, () => {
+    cargar();
+    onCambio();
+  });
+
   const accion: Accion = async (nombre, args) => {
     const { error } = await supabase.rpc(nombre, { p_org: organizacionId, ...args });
     if (error) {
@@ -84,6 +94,25 @@ export default function DetalleCotizacion({
     return true;
   };
 
+  async function responder(sede: SedePedido, respuesta: string) {
+    let motivo: string | null = null;
+    if (respuesta === 'no_se_pide') {
+      const escrito = window.prompt(`Motivo por el que no se pide (${sede.sede}):`, sede.motivo_compras ?? '');
+      if (escrito === null) return; // canceló: la respuesta queda como estaba
+      if (escrito.trim() === '') {
+        setError('Escribe el motivo por el que no se pide');
+        return;
+      }
+      motivo = escrito.trim();
+    }
+    await accion('agotado_responder', {
+      p_item: pedido.item_id,
+      p_sede: sede.sede_id,
+      p_respuesta: respuesta,
+      p_motivo: motivo,
+    });
+  }
+
   const activas = cots.filter((c) => c.activa);
   const antiguas = cots.filter((c) => !c.activa);
   const conCosto = activas.filter((c) => c.disponible === true && c.costo_con_iva !== null);
@@ -94,12 +123,18 @@ export default function DetalleCotizacion({
     <div>
       <button type="button" style={boton} onClick={onVolver}>← Volver a pedidos</button>
       <h2 style={{ fontSize: 17, margin: '12px 0 4px' }}>
-        Item {pedido.item_id} — {pedido.nombre_base}
+        Item {idVisible(pedido.item_id, pedido.provisional)} — {pedido.nombre_base}
       </h2>
       <div style={{ fontSize: 13, marginBottom: 12 }}>
         Línea: {pedido.linea ?? '-'} · IVA: {Math.round((pedido.iva ?? 0) * 100)}% ·{' '}
         Cantidad sugerida total: {pedido.cantidad_sugerida ?? '-'} {pedido.unidad_medida ?? ''} ·{' '}
         Estado: {ESTADOS[pedido.estado] ?? pedido.estado}
+        {pedido.origen === 'manual' && (
+          <> · Iniciado por Compras (sin agotado){pedido.provisional ? ' · ítem provisional (sin ID del ERP)' : ''}</>
+        )}
+        {pedido.ultima_orden_numero && (
+          <> · Última orden: {textoUltimaOrden(pedido.ultima_orden_numero, pedido.ultima_orden_fecha, pedido.ultima_orden_cantidad)}</>
+        )}
       </div>
 
       {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
@@ -121,48 +156,53 @@ export default function DetalleCotizacion({
         </p>
       )}
 
-      <h3 style={{ fontSize: 14, margin: '12px 0 4px' }}>Cantidad sugerida por sede</h3>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              {['Sede', 'Usuario', 'Cant. sugerida', 'Nota', 'Fecha solicitud', 'Respuesta Compras (manual)'].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pedido.sedes.map((s) => (
-              <tr key={s.sede_id}>
-                <td style={celda}>{s.sede}</td>
-                <td style={celda}>{s.usuario ?? ''}</td>
-                <td style={celda}>{s.cantidad_sugerida ?? ''}</td>
-                <td style={{ ...celda, whiteSpace: 'pre-wrap', maxWidth: 260 }}>{s.notas ?? ''}</td>
-                <td style={celda}>{fecha(s.fecha)}</td>
-                <td style={celda}>
-                  <select
-                    value={s.respuesta_compras ?? ''}
-                    aria-label={`Respuesta para ${s.sede}`}
-                    style={{ ...campo, padding: 3, fontSize: 13 }}
-                    onChange={(e) =>
-                      accion('agotado_responder', {
-                        p_item: pedido.item_id,
-                        p_sede: s.sede_id,
-                        p_respuesta: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="" disabled>Sin respuesta</option>
-                    {RESPUESTAS.map((r) => (
-                      <option key={r.valor} value={r.valor}>{r.texto}</option>
-                    ))}
-                  </select>
-                </td>
+      {pedido.sedes.length === 0 ? (
+        <p style={{ fontSize: 13 }}>
+          Ninguna sede reportó este ítem como agotado: la gestión la inició Compras.
+        </p>
+      ) : (
+        <>
+        <h3 style={{ fontSize: 14, margin: '12px 0 4px' }}>Cantidad sugerida por sede</h3>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Sede', 'Usuario', 'Cant. sugerida', 'Nota', 'Fecha solicitud', 'Respuesta Compras (manual)'].map((h) => (
+                  <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {pedido.sedes.map((s) => (
+                <tr key={s.sede_id}>
+                  <td style={celda}>{s.sede}</td>
+                  <td style={celda}>{s.usuario ?? ''}</td>
+                  <td style={celda}>{s.cantidad_sugerida ?? ''}</td>
+                  <td style={{ ...celda, whiteSpace: 'pre-wrap', maxWidth: 260 }}>{s.notas ?? ''}</td>
+                  <td style={celda}>{fecha(s.fecha)}</td>
+                  <td style={celda}>
+                    <select
+                      value={s.respuesta_compras ?? ''}
+                      aria-label={`Respuesta para ${s.sede}`}
+                      style={{ ...campo, padding: 3, fontSize: 13 }}
+                      onChange={(e) => responder(s, e.target.value)}
+                    >
+                      <option value="" disabled>Sin respuesta</option>
+                      {RESPUESTAS.map((r) => (
+                        <option key={r.valor} value={r.valor}>{r.texto}</option>
+                      ))}
+                    </select>
+                    {s.respuesta_compras === 'no_se_pide' && s.motivo_compras && (
+                      <div style={{ fontSize: 11, maxWidth: 220 }}>Motivo: {s.motivo_compras}</div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        </>
+      )}
 
       <h3 style={{ fontSize: 14, margin: '16px 0 4px' }}>Cotizaciones por proveedor</h3>
       <div style={{ overflowX: 'auto' }}>
@@ -192,7 +232,7 @@ export default function DetalleCotizacion({
             {!cargando && activas.length === 0 && (
               <tr>
                 <td style={celda} colSpan={14}>
-                  Aún no hay cotizaciones. Crea una solicitud por proveedor (pestaña Solicitudes) o agrega un proveedor aquí abajo.
+                  Aún no hay cotizaciones. Crea una solicitud por proveedor (pestaña Por proveedor) o agrega un proveedor aquí abajo.
                 </td>
               </tr>
             )}

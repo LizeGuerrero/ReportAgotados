@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { TablaTiempoReal } from '@/components/useTiempoReal';
 
 export const celda: React.CSSProperties = {
   border: '1px solid #000',
@@ -63,12 +64,23 @@ export const ESTADOS: Record<string, string> = {
   pedido_solicitado: '✅ Pedido solicitado',
   agotado_proveedor: '🔴 Agotado en proveedor',
   repartir_sedes: '🔁 Repartir entre sedes',
+  no_se_pide: '🚫 No se pide',
 };
+
+/** Tablas que, al cambiar, deben refrescar las pantallas de Pedidos (ver useTiempoReal). */
+export const TABLAS_PEDIDOS: readonly TablaTiempoReal[] = [
+  'agotados',
+  'solicitud_items',
+  'solicitudes_cotizacion',
+  'cotizacion_precios',
+  'ordenes_compra',
+];
 
 export const RESPUESTAS: { valor: string; texto: string }[] = [
   { valor: 'pedido_solicitado', texto: 'Pedido solicitado a proveedor' },
   { valor: 'agotado_proveedor', texto: 'Agotado en proveedor' },
   { valor: 'repartir_sedes', texto: 'Repartir entre sedes' },
+  { valor: 'no_se_pide', texto: 'No se pide (con motivo)' },
 ];
 
 export interface ProveedorItem {
@@ -88,7 +100,9 @@ export interface SedePedido {
   notas: string | null;
   usuario: string | null;
   fecha: string | null;
-  respuesta_compras: 'pedido_solicitado' | 'agotado_proveedor' | 'repartir_sedes' | null;
+  respuesta_compras: 'pedido_solicitado' | 'agotado_proveedor' | 'repartir_sedes' | 'no_se_pide' | null;
+  /** Motivo escrito por Compras; solo existe cuando la respuesta es 'no_se_pide'. */
+  motivo_compras: string | null;
 }
 
 export interface Pedido {
@@ -107,7 +121,32 @@ export interface Pedido {
   proveedor_elegido: string | null;
   proveedores: ProveedorItem[];
   fecha_estado: string | null;
+  /** 'agotado': lo reportó una sede. 'manual': lo inició Compras (sin agotado). */
+  origen: 'agotado' | 'manual';
+  /** Ítem creado por Compras que aún no tiene su ID real del ERP. */
+  provisional: boolean;
+  ultima_orden_numero: string | null;
+  ultima_orden_fecha: string | null;
+  ultima_orden_cantidad: number | null;
   total: number;
+}
+
+/** Los ítems provisionales tienen ID negativo interno: se muestran como P1, P2… */
+export function idVisible(itemId: number, provisional: boolean) {
+  return provisional ? `P${Math.abs(itemId)}` : String(itemId);
+}
+
+/** "OC-0012 · 12/09/26 · 100 und" (vacío si el ítem nunca se ha pedido) */
+export function textoUltimaOrden(
+  numero: string | null,
+  fechaOrden: string | null,
+  cantidad: number | null,
+) {
+  if (!numero) return '';
+  const dia = fechaOrden
+    ? new Date(fechaOrden).toLocaleDateString('es-CO', { dateStyle: 'short', timeZone: 'America/Bogota' })
+    : '';
+  return [numero, dia, cantidad !== null ? `${cantidad} und` : ''].filter(Boolean).join(' · ');
 }
 
 /** "6 cajas de 200" o "5 completas + 1 incompleta (100 und)" */

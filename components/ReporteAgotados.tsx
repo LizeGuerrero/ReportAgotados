@@ -24,8 +24,10 @@ interface Fila {
   usuario: string | null;
   estado_comercial: 'solicitar_pedido' | null;
   fecha_estado: string | null;
-  respuesta_compras: 'pedido_solicitado' | 'agotado_proveedor' | 'repartir_sedes' | null;
+  respuesta_compras: 'pedido_solicitado' | 'agotado_proveedor' | 'repartir_sedes' | 'no_se_pide' | null;
   fecha_respuesta: string | null;
+  /** Motivo que escribió Compras cuando la respuesta es 'no_se_pide'. */
+  motivo_compras: string | null;
   cantidad_sugerida: number | null;
   notas: string | null;
   fecha_nota: string | null;
@@ -54,7 +56,15 @@ const RESPUESTAS: Record<string, string> = {
   pedido_solicitado: 'Pedido solicitado a proveedor',
   agotado_proveedor: 'Agotado en proveedor',
   repartir_sedes: 'Repartir entre sedes',
+  no_se_pide: 'No se pide',
 };
+
+/** "No se pide: baja rotación" — el motivo viaja con la respuesta para que la sede entienda por qué. */
+const textoRespuesta = (f: { respuesta_compras: string | null; motivo_compras: string | null }) =>
+  f.respuesta_compras
+    ? RESPUESTAS[f.respuesta_compras] +
+      (f.respuesta_compras === 'no_se_pide' && f.motivo_compras ? `: ${f.motivo_compras}` : '')
+    : '';
 
 const POR_PAGINA = 50;
 const LOTE_COPIA = 200; // máximo que acepta listar_agotados por llamada
@@ -64,6 +74,7 @@ const RESPUESTA_INSIGNIA: Record<string, string> = {
   pedido_solicitado: 'ui-badge--success',
   agotado_proveedor: 'ui-badge--danger',
   repartir_sedes: 'ui-badge--violet',
+  no_se_pide: 'ui-badge--warning',
 };
 
 // Claves que entiende listar_agotados(p_orden). Ver sql/migration_agotados_orden.sql
@@ -96,7 +107,7 @@ const COLUMNAS: Columna[] = [
   { clave: 'usuario', titulo: 'Usuario', orden: 'usuario', texto: (f) => f.usuario ?? '' },
   { clave: 'solicitud', titulo: 'Solicitud', orden: 'solicitud', texto: (f) => (f.estado_comercial !== null ? 'Solicitar pedido' : '') },
   { clave: 'fecha_solicitud', titulo: 'Fecha solicitud', orden: 'fecha_solicitud', clase: 'ag-col-fecha', texto: (f) => fecha(f.fecha_estado) },
-  { clave: 'respuesta', titulo: 'Respuesta Compras', orden: 'respuesta', texto: (f) => (f.respuesta_compras ? RESPUESTAS[f.respuesta_compras] : '') },
+  { clave: 'respuesta', titulo: 'Respuesta Compras', orden: 'respuesta', texto: (f) => textoRespuesta(f) },
   { clave: 'fecha_respuesta', titulo: 'Fecha respuesta', orden: 'fecha_respuesta', clase: 'ag-col-fecha', texto: (f) => fecha(f.fecha_respuesta) },
   { clave: 'cantidad', titulo: 'Cant. sugerida', orden: 'cantidad', clase: 'ag-col-num', texto: (f) => f.cantidad_sugerida?.toString() ?? '' },
   { clave: 'nota', titulo: 'Nota', orden: 'nota', clase: 'ag-col-nota', texto: (f) => f.notas ?? '' },
@@ -743,7 +754,7 @@ export default function ReporteAgotados({ organizacionId }: { organizacionId: st
           { titulo: 'Cant. sugerida', texto: (f) => f.cantidad_sugerida?.toString() ?? '' },
           { titulo: 'Nota', texto: (f) => f.notas ?? '' },
           { titulo: 'Fecha solicitud', texto: (f) => fecha(f.fecha_estado) },
-          { titulo: 'Respuesta Compras', texto: (f) => (f.respuesta_compras ? RESPUESTAS[f.respuesta_compras] : '') },
+          { titulo: 'Respuesta Compras', texto: (f) => textoRespuesta(f) },
         ];
         // Tabla para Excel/Word/correo (HTML) y lista legible para WhatsApp/chat (texto plano)
         const tabla = construirTablaCopia(
@@ -756,7 +767,7 @@ export default function ReporteAgotados({ organizacionId }: { organizacionId: st
           if (f.referencia) partes.push(`Ref: ${f.referencia}`);
           if (f.cantidad_sugerida !== null) partes.push(`Cant: ${f.cantidad_sugerida}`);
           if (f.notas) partes.push(`Nota: ${f.notas.replace(/\s+/g, ' ')}`);
-          if (f.respuesta_compras) partes.push(RESPUESTAS[f.respuesta_compras]);
+          if (f.respuesta_compras) partes.push(textoRespuesta(f));
           return partes.join(' | ');
         });
         const sede = lista[0].sede ? ` - ${lista[0].sede}` : '';
@@ -1228,7 +1239,12 @@ function FilaAgotado({
   }
 
   const insigniaRespuesta = f.respuesta_compras && (
-    <span className={`ui-badge ${RESPUESTA_INSIGNIA[f.respuesta_compras]}`}>{RESPUESTAS[f.respuesta_compras]}</span>
+    <>
+      <span className={`ui-badge ${RESPUESTA_INSIGNIA[f.respuesta_compras]}`}>{RESPUESTAS[f.respuesta_compras]}</span>
+      {f.respuesta_compras === 'no_se_pide' && f.motivo_compras && (
+        <div style={{ fontSize: 12, marginTop: 2 }}>{f.motivo_compras}</div>
+      )}
+    </>
   );
   const insigniaSolicitud = activo && <span className="ui-badge ui-badge--info">Solicitar pedido</span>;
 

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { boton, celda, fecha, pesos, PanelTexto, textoCajas } from '@/components/pedidos/comun';
+import { useTiempoReal } from '@/components/useTiempoReal';
+import { boton, celda, fecha, pesos, PanelTexto, TABLAS_PEDIDOS, textoCajas } from '@/components/pedidos/comun';
 
 interface LineaPorGenerar {
   cotizacion_id: string;
@@ -78,6 +79,10 @@ export default function OrdenesCompra({
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Lo que falta por pedir a cada proveedor cambia cuando alguien elige un ganador o genera una orden:
+  // dos compradores a la vez ven lo mismo sin recargar (y la base impide generar dos veces la misma orden).
+  useTiempoReal(supabase, organizacionId, TABLAS_PEDIDOS, cargar);
 
   async function verTexto(id: string, numero: string, proveedor: string) {
     const { data, error } = await supabase.rpc('orden_compra_texto', { p_org: organizacionId, p_orden: id });

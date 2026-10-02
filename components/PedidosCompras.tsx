@@ -3,19 +3,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
-import { useAgotadosTiempoReal } from '@/components/useAgotadosTiempoReal';
+import { useTiempoReal } from '@/components/useTiempoReal';
 import SelectorLinea from '@/components/SelectorLinea';
 import DetalleCotizacion from '@/components/pedidos/DetalleCotizacion';
 import Solicitudes from '@/components/pedidos/Solicitudes';
 import OrdenesCompra from '@/components/pedidos/OrdenesCompra';
-import { boton, campo, celda, ESTADOS, pesos, type Pedido } from '@/components/pedidos/comun';
+import PorProveedor from '@/components/pedidos/PorProveedor';
+import ItemsProvisionales from '@/components/pedidos/ItemsProvisionales';
+import {
+  boton, campo, celda, ESTADOS, idVisible, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type Pedido,
+} from '@/components/pedidos/comun';
 
-type Pestana = 'pedidos' | 'solicitudes' | 'ordenes';
+type Pestana = 'pedidos' | 'proveedor' | 'solicitudes' | 'ordenes' | 'provisionales';
 
 const PESTANAS: { valor: Pestana; texto: string }[] = [
   { valor: 'pedidos', texto: 'Pedidos' },
+  { valor: 'proveedor', texto: 'Por proveedor' },
   { valor: 'solicitudes', texto: 'Solicitudes de cotización' },
   { valor: 'ordenes', texto: 'Órdenes de compra' },
+  { valor: 'provisionales', texto: 'Ítems provisionales' },
 ];
 
 const POR_PAGINA = 50;
@@ -51,8 +57,10 @@ export default function PedidosCompras({ organizacionId }: { organizacionId: str
       </div>
 
       {pestana === 'pedidos' && <ListaPedidos supabase={supabase} organizacionId={organizacionId} />}
+      {pestana === 'proveedor' && <PorProveedor supabase={supabase} organizacionId={organizacionId} />}
       {pestana === 'solicitudes' && <Solicitudes supabase={supabase} organizacionId={organizacionId} />}
       {pestana === 'ordenes' && <OrdenesCompra supabase={supabase} organizacionId={organizacionId} />}
+      {pestana === 'provisionales' && <ItemsProvisionales supabase={supabase} organizacionId={organizacionId} />}
     </div>
   );
 }
@@ -74,6 +82,7 @@ function ListaPedidos({
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [detalle, setDetalle] = useState<Pedido | null>(null);
+  const [aviso, setAviso] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -119,18 +128,45 @@ function ListaPedidos({
     cargar();
   }, [cargar]);
 
-  // El detalle abierto se mantiene al día cuando la lista se recarga
+  // El detalle abierto se mantiene al día cuando la lista se recarga. Si el ítem ya no está en la
+  // página actual (cambió de estado y de posición, o lo gestionó otra persona) se consulta solo a él:
+  // así el detalle no queda con información vieja y, si ya no está pendiente, se avisa.
   useEffect(() => {
     if (!detalle) return;
-    const nuevo = filas.find((f) => f.item_id === detalle.item_id);
-    if (nuevo && nuevo !== detalle) setDetalle(nuevo);
-  }, [filas, detalle]);
+    const enPagina = filas.find((f) => f.item_id === detalle.item_id);
+    if (enPagina) {
+      if (enPagina !== detalle) setDetalle(enPagina);
+      return;
+    }
+    let vigente = true;
+    supabase
+      .rpc('listar_pedidos', {
+        p_org: organizacionId,
+        p_busqueda: String(detalle.item_id),
+        p_limit: 20,
+        p_offset: 0,
+      })
+      .then(({ data, error }) => {
+        if (!vigente || error) return;
+        const f = ((data ?? []) as Pedido[]).find((x) => x.item_id === detalle.item_id);
+        if (!f) {
+          setAviso(`El ítem ${idVisible(detalle.item_id, detalle.provisional)} — ${detalle.nombre_base} ya no está pendiente de gestión.`);
+          setDetalle(null);
+        } else if (JSON.stringify({ ...f, total: 0 }) !== JSON.stringify({ ...detalle, total: 0 })) {
+          setDetalle(f);
+        }
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [filas, detalle, supabase, organizacionId]);
 
   const alCambiarEnVivo = useCallback(() => {
     cargar();
     cargarLineas();
   }, [cargar, cargarLineas]);
-  useAgotadosTiempoReal(supabase, organizacionId, alCambiarEnVivo);
+  // Agotados, solicitudes, cotizaciones y órdenes: cualquier cambio refresca la lista de trabajo
+  useTiempoReal(supabase, organizacionId, TABLAS_PEDIDOS, alCambiarEnVivo);
 
   async function reabrir(p: Pedido) {
     const { error } = await supabase.rpc('pedido_reabrir', { p_org: organizacionId, p_item: p.item_id });
@@ -190,6 +226,12 @@ function ListaPedidos({
       </div>
 
       {error && <p style={{ color: '#000', fontSize: 13 }}>Error: {error}</p>}
+      {aviso && (
+        <p style={{ fontSize: 13 }}>
+          {aviso}{' '}
+          <button type="button" style={boton} onClick={() => setAviso('')}>Entendido</button>
+        </p>
+      )}
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
@@ -203,8 +245,20 @@ function ListaPedidos({
           <tbody>
             {filas.map((p) => (
               <tr key={p.item_id}>
-                <td style={celda}>{p.item_id}</td>
-                <td style={celda}>{p.nombre_base}</td>
+                <td style={celda}>{idVisible(p.item_id, p.provisional)}</td>
+                <td style={celda}>
+                  {p.nombre_base}
+                  {p.origen === 'manual' && (
+                    <div style={{ fontSize: 11 }}>
+                      Iniciado por Compras (sin agotado){p.provisional ? ' · ítem provisional' : ''}
+                    </div>
+                  )}
+                  {p.ultima_orden_numero && (
+                    <div style={{ fontSize: 11 }}>
+                      Última orden: {textoUltimaOrden(p.ultima_orden_numero, p.ultima_orden_fecha, p.ultima_orden_cantidad)}
+                    </div>
+                  )}
+                </td>
                 <td style={celda}>{p.linea ?? ''}</td>
                 <td style={celda}>
                   {p.cantidad_sugerida ?? ''}
@@ -239,7 +293,7 @@ function ListaPedidos({
             ))}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td style={celda} colSpan={9}>No hay solicitudes activas</td>
+                <td style={celda} colSpan={9}>No hay ítems en gestión</td>
               </tr>
             )}
           </tbody>
