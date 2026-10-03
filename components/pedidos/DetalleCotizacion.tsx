@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import {
   boton, campo, celda, ESTADOS, fecha, idVisible, pesos, RESPUESTAS, TABLAS_PEDIDOS, textoCajas,
@@ -472,12 +473,18 @@ function AgregarProveedor({
     <div style={{ border: '1px solid #000', padding: 12, marginTop: 16 }}>
       <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>Agregar proveedor a esta cotización</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select defaultValue="" onChange={(e) => elegirExistente(e.target.value)} style={campo} aria-label="Proveedor del ítem">
-          <option value="" disabled>Proveedor ya vinculado al ítem…</option>
-          {disponibles.map((p) => (
-            <option key={p.proveedor_id} value={p.proveedor_id}>{p.proveedor}</option>
-          ))}
-        </select>
+        <Combobox
+          opciones={disponibles.map((p) => ({
+            valor: String(p.proveedor_id),
+            texto: p.proveedor,
+            detalle: [`NIT ${p.proveedor_id}`, p.codigo ? `ref ${p.codigo}` : ''].filter(Boolean).join(' · '),
+          }))}
+          valor={disponibles.some((p) => String(p.proveedor_id) === nit) ? nit : ''}
+          onCambio={elegirExistente}
+          etiqueta="Proveedor del ítem"
+          placeholder="Proveedor ya vinculado al ítem…"
+          ancho={280}
+        />
         <span style={{ fontSize: 13 }}>o uno nuevo:</span>
         <input value={nit} inputMode="numeric" placeholder="NIT (sin guiones ni DV)"
           onChange={(e) => setNit(e.target.value.replace(/\D/g, ''))} style={{ ...campo, width: 170 }} />

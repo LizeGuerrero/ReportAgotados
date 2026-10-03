@@ -2,19 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import Combobox from '@/components/Combobox';
 import SelectorLinea from '@/components/SelectorLinea';
 import { useTiempoReal } from '@/components/useTiempoReal';
+import PorItem from '@/components/pedidos/PorItem';
 import {
   boton, campo, celda, idVisible, PanelTexto, pesos, TABLAS_PEDIDOS, textoUltimaOrden,
+  type ProveedorLista,
 } from '@/components/pedidos/comun';
-
-interface ProveedorLista {
-  id: number;
-  nombre: string;
-  items_pendientes: number;
-  solicitudes_abiertas: number;
-  items_total: number;
-}
 
 interface ItemProveedor {
   item_id: number;
@@ -212,26 +207,25 @@ export default function PorProveedor({
       {onTerminar && (
         <button type="button" style={boton} onClick={onTerminar}>← Volver a solicitudes</button>
       )}
-      <h2 style={{ fontSize: 17, margin: '12px 0' }}>Pedir por proveedor</h2>
+      <h2 style={{ fontSize: 17, margin: '12px 0' }}>Cotizar: por proveedor o por ítem</h2>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <select
-          value={proveedor}
-          onChange={(e) => {
-            setProveedor(e.target.value);
+        <Combobox
+          opciones={proveedores.map((p) => ({
+            valor: String(p.id),
+            texto: p.nombre,
+            detalle: `NIT ${p.id} · ${p.items_pendientes} con agotado · ${p.items_total} ítems`,
+          }))}
+          valor={proveedor}
+          onCambio={(v) => {
+            setProveedor(v);
             setSel({});
             setItemNuevo(false);
           }}
-          style={{ ...campo, minWidth: 320 }}
-          aria-label="Proveedor"
-        >
-          <option value="">Elige un proveedor…</option>
-          {proveedores.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre} ({p.items_pendientes} con agotado · {p.items_total} ítems)
-            </option>
-          ))}
-        </select>
+          etiqueta="Proveedor"
+          vacio="Todos los proveedores (cotizar por ítem)"
+          ancho={340}
+        />
         <SelectorLinea lineas={lineas} valor={linea} onCambio={setLinea} />
         <input
           value={textoBusqueda}
@@ -271,10 +265,15 @@ export default function PorProveedor({
 
       {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
 
+      {/* Sin proveedor elegido se parte del ítem: se ven todos sus proveedores y se pide a varios a la vez */}
       {!proveedor && (
-        <p style={{ fontSize: 13 }}>
-          Elige un proveedor para ver todo lo que suministra. Los ítems que alguna sede reportó agotados salen primero.
-        </p>
+        <PorItem
+          supabase={supabase}
+          organizacionId={organizacionId}
+          linea={linea}
+          busqueda={busqueda}
+          proveedores={proveedores}
+        />
       )}
       {proveedor && catalogo && !busqueda.trim() && (
         <p style={{ fontSize: 13 }}>Escribe un nombre, ítem o referencia para buscar en el catálogo completo.</p>

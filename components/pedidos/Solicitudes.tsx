@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import PorProveedor from '@/components/pedidos/PorProveedor';
-import { boton, campo, celda, fecha, PanelTexto, TABLAS_PEDIDOS } from '@/components/pedidos/comun';
+import { boton, celda, fecha, PanelTexto, TABLAS_PEDIDOS } from '@/components/pedidos/comun';
 
 interface Solicitud {
   id: string;
@@ -97,12 +98,18 @@ export default function Solicitudes({
         <button type="button" style={{ ...boton, fontWeight: 600 }} onClick={() => setNueva(true)}>
           + Nueva solicitud de cotización
         </button>
-        <select value={estado} onChange={(e) => setEstado(e.target.value)} style={campo} aria-label="Estado">
-          <option value="">Todas</option>
-          <option value="borrador">Por enviar</option>
-          <option value="enviada">Enviadas</option>
-          <option value="cerrada">Cerradas</option>
-        </select>
+        <Combobox
+          opciones={[
+            { valor: 'borrador', texto: 'Por enviar' },
+            { valor: 'enviada', texto: 'Enviadas' },
+            { valor: 'cerrada', texto: 'Cerradas' },
+          ]}
+          valor={estado}
+          onCambio={setEstado}
+          etiqueta="Estado"
+          vacio="Todas"
+          ancho={200}
+        />
         <button type="button" style={boton} onClick={cargar}>Actualizar</button>
       </div>
 

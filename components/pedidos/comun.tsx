@@ -131,6 +131,15 @@ export interface Pedido {
   total: number;
 }
 
+/** Fila de listar_proveedores_pedidos (selector de proveedor de las vistas de cotización). */
+export interface ProveedorLista {
+  id: number;
+  nombre: string;
+  items_pendientes: number;
+  solicitudes_abiertas: number;
+  items_total: number;
+}
+
 /** Los ítems provisionales tienen ID negativo interno: se muestran como P1, P2… */
 export function idVisible(itemId: number, provisional: boolean) {
   return provisional ? `P${Math.abs(itemId)}` : String(itemId);

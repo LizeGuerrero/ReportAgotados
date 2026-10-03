@@ -3,22 +3,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
+import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import SelectorLinea from '@/components/SelectorLinea';
 import DetalleCotizacion from '@/components/pedidos/DetalleCotizacion';
 import Solicitudes from '@/components/pedidos/Solicitudes';
 import OrdenesCompra from '@/components/pedidos/OrdenesCompra';
 import PorProveedor from '@/components/pedidos/PorProveedor';
+import Comparativo from '@/components/pedidos/Comparativo';
 import ItemsProvisionales from '@/components/pedidos/ItemsProvisionales';
 import {
   boton, campo, celda, ESTADOS, idVisible, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type Pedido,
 } from '@/components/pedidos/comun';
 
-type Pestana = 'pedidos' | 'proveedor' | 'solicitudes' | 'ordenes' | 'provisionales';
+type Pestana = 'pedidos' | 'proveedor' | 'comparativo' | 'solicitudes' | 'ordenes' | 'provisionales';
 
 const PESTANAS: { valor: Pestana; texto: string }[] = [
   { valor: 'pedidos', texto: 'Pedidos' },
   { valor: 'proveedor', texto: 'Por proveedor' },
+  { valor: 'comparativo', texto: 'Comparativo' },
   { valor: 'solicitudes', texto: 'Solicitudes de cotización' },
   { valor: 'ordenes', texto: 'Órdenes de compra' },
   { valor: 'provisionales', texto: 'Ítems provisionales' },
@@ -58,6 +61,7 @@ export default function PedidosCompras({ organizacionId }: { organizacionId: str
 
       {pestana === 'pedidos' && <ListaPedidos supabase={supabase} organizacionId={organizacionId} />}
       {pestana === 'proveedor' && <PorProveedor supabase={supabase} organizacionId={organizacionId} />}
+      {pestana === 'comparativo' && <Comparativo supabase={supabase} organizacionId={organizacionId} />}
       {pestana === 'solicitudes' && <Solicitudes supabase={supabase} organizacionId={organizacionId} />}
       {pestana === 'ordenes' && <OrdenesCompra supabase={supabase} organizacionId={organizacionId} />}
       {pestana === 'provisionales' && <ItemsProvisionales supabase={supabase} organizacionId={organizacionId} />}
@@ -203,20 +207,17 @@ function ListaPedidos({
             setPagina(0);
           }}
         />
-        <select
-          value={estado}
-          onChange={(e) => {
-            setEstado(e.target.value);
+        <Combobox
+          opciones={Object.entries(ESTADOS).map(([valor, textoEstado]) => ({ valor, texto: textoEstado }))}
+          valor={estado}
+          onCambio={(v) => {
+            setEstado(v);
             setPagina(0);
           }}
-          aria-label="Estado"
-          style={campo}
-        >
-          <option value="">Todos los estados</option>
-          {Object.entries(ESTADOS).map(([valor, textoEstado]) => (
-            <option key={valor} value={valor}>{textoEstado}</option>
-          ))}
-        </select>
+          etiqueta="Estado"
+          vacio="Todos los estados"
+          ancho={240}
+        />
         <input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
