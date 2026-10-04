@@ -1,0 +1,233 @@
+/*
+ * Organizaciones, invitaciones y panel de administración.
+ * Solo usa los tokens de tokens.css y se apoya en las clases de ui.css (ui-btn, ui-input,
+ * ui-badge, ui-alert...). Prefijos: org- (pantallas de ingreso) y adm- (panel de admin).
+ */
+
+/* ---- Pantallas de ingreso / estado ---- */
+.org-datos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1rem;
+  margin: 1.25rem 0 0;
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  background-color: var(--color-surface-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+.org-datos dt {
+  color: var(--color-text-subtle);
+}
+.org-datos dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-weight: 600;
+}
+.org-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.625rem;
+  margin: 1.5rem 0 0;
+}
+.org-acciones > * {
+  flex: 1 1 12rem;
+}
+.org-aviso {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 1.25rem 0 0;
+  padding: 0.75rem 0.875rem;
+  text-align: left;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-warning);
+  background-color: var(--color-warning-soft);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+}
+.org-aviso p {
+  margin: 0;
+}
+.org-form {
+  display: grid;
+  gap: 1rem;
+  margin: 1.25rem 0 0;
+  text-align: left;
+}
+.org-mensaje-ok {
+  padding: 0.75rem 0.875rem;
+  font-size: 0.875rem;
+  text-align: left;
+  color: var(--color-success);
+  background-color: var(--color-success-soft);
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-md);
+}
+.org-mensaje-ok p {
+  margin: 0;
+}
+
+/* ---- Panel de administración ---- */
+.adm-page {
+  box-sizing: border-box;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+}
+.adm-head {
+  margin: 0 0 1.25rem;
+}
+.adm-title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.adm-lead {
+  margin: 0.25rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+.adm-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 1.25rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.adm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--control-h);
+  padding: 0 0.875rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+}
+.adm-tab:hover {
+  color: var(--color-text);
+}
+.adm-tab[aria-selected="true"] {
+  color: var(--color-text);
+  border-bottom-color: var(--color-ink);
+}
+.adm-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+.adm-card {
+  padding: 1rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.adm-card + .adm-card {
+  margin-top: 1rem;
+}
+.adm-card__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.adm-vacio {
+  margin: 0;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--color-text-subtle);
+}
+.adm-tabla-wrap {
+  overflow-x: auto;
+}
+.adm-tabla {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.adm-tabla th {
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.adm-tabla td {
+  padding: 0.625rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.adm-tabla tr:last-child td {
+  border-bottom: 0;
+}
+.adm-persona {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.adm-persona strong {
+  font-weight: 600;
+}
+.adm-persona span {
+  overflow-wrap: anywhere;
+  color: var(--color-text-subtle);
+  font-size: 0.8125rem;
+}
+.adm-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  justify-content: flex-end;
+}
+.adm-select {
+  min-width: 8.5rem;
+  max-width: 100%;
+}
+.adm-invitar {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  align-items: end;
+}
+.adm-enlace {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.adm-enlace input {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+}
+.ui-badge--muted {
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+@media (max-width: 40rem) {
+  .org-datos {
+    grid-template-columns: 1fr;
+    gap: 0.125rem;
+  }
+  .org-datos dd {
+    margin-bottom: 0.5rem;
+  }
+}

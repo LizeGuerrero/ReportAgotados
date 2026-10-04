@@ -6,6 +6,7 @@ import '@/styles/ui.css';
 import '@/styles/auth.css';
 import '@/styles/app.css';
 import '@/styles/agotados.css';
+import '@/styles/organizaciones.css';
 
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },

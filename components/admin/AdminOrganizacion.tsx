@@ -1,0 +1,169 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { ROL_PREDETERMINADO } from '@/lib/roles';
+import { AlertIcon } from '@/components/ui/icons';
+import type { InvitacionOrg, MiembroOrg } from '@/types/auth.types';
+import type { RolOpt, SedeOpt } from './tipos';
+import { SolicitudesPanel } from './SolicitudesPanel';
+import { MiembrosPanel } from './MiembrosPanel';
+import { InvitacionesPanel } from './InvitacionesPanel';
+
+interface Props {
+  organizacionId: string;
+  slug: string;
+  nombreOrganizacion: string;
+  identificacion: string | null;
+  usuarioActualId: string;
+  /** Propietario inicial (se vuelve a leer al recargar, por si se transfiere). */
+  propietarioInicial: string | null;
+}
+
+type Pestana = 'solicitudes' | 'miembros' | 'invitaciones';
+
+// Todo lo que muestra y hace este panel pasa por funciones de base de datos que vuelven a
+// comprobar que quien llama es admin de esta organización: ocultar el panel no es la defensa.
+export function AdminOrganizacion({
+  organizacionId,
+  slug,
+  nombreOrganizacion,
+  identificacion,
+  usuarioActualId,
+  propietarioInicial,
+}: Props) {
+  const supabase = createClient();
+  const [pestana, setPestana] = useState<Pestana>('solicitudes');
+  const [miembros, setMiembros] = useState<MiembroOrg[]>([]);
+  const [invitaciones, setInvitaciones] = useState<InvitacionOrg[]>([]);
+  const [roles, setRoles] = useState<RolOpt[]>([]);
+  const [sedes, setSedes] = useState<SedeOpt[]>([]);
+  const [propietarioId, setPropietarioId] = useState<string | null>(propietarioInicial);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    const [m, i, r, s, o] = await Promise.all([
+      supabase.rpc('listar_miembros', { p_org: organizacionId }),
+      supabase.rpc('listar_invitaciones', { p_org: organizacionId }),
+      supabase.from('roles').select('id, nombre').eq('organizacion_id', organizacionId).order('nombre'),
+      supabase.from('sedes').select('id, nombre').eq('organizacion_id', organizacionId).order('nombre'),
+      supabase.from('organizaciones').select('propietario_id').eq('id', organizacionId).maybeSingle(),
+    ]);
+    const fallo = m.error ?? i.error ?? r.error ?? s.error;
+    if (fallo) setError(fallo.message);
+    setMiembros((m.data ?? []) as MiembroOrg[]);
+    setInvitaciones((i.data ?? []) as InvitacionOrg[]);
+    // Predeterminado primero, luego el resto por nombre.
+    const lista = ((r.data ?? []) as RolOpt[]).slice().sort((a, b) =>
+      a.nombre === ROL_PREDETERMINADO ? -1 : b.nombre === ROL_PREDETERMINADO ? 1 : a.nombre.localeCompare(b.nombre, 'es')
+    );
+    setRoles(lista);
+    setSedes((s.data ?? []) as SedeOpt[]);
+    // si la columna aún no existe (parche sin aplicar) simplemente no hay propietario
+    setPropietarioId(o.error ? null : ((o.data as { propietario_id: string | null } | null)?.propietario_id ?? null));
+    setCargando(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizacionId]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const alCambiar = (texto: string) => {
+    setError(null);
+    setMensaje(texto);
+    cargar();
+  };
+  const alFallar = (texto: string) => {
+    setMensaje(null);
+    setError(texto);
+  };
+
+  const solicitudes = miembros.filter((m) => m.estado === 'pendiente');
+  const activos = miembros.filter((m) => m.estado !== 'pendiente');
+  const pendientesInv = invitaciones.filter((i) => i.estado === 'pendiente').length;
+
+  const tabs: { clave: Pestana; texto: string; cuenta?: number }[] = [
+    { clave: 'solicitudes', texto: 'Solicitudes', cuenta: solicitudes.length },
+    { clave: 'miembros', texto: 'Miembros', cuenta: activos.length },
+    { clave: 'invitaciones', texto: 'Invitaciones', cuenta: pendientesInv },
+  ];
+
+  return (
+    <main className="adm-page">
+      <header className="adm-head">
+        <h1 className="adm-title">Administración</h1>
+        <p className="adm-lead">
+          {nombreOrganizacion}
+          {identificacion ? ` · ${identificacion}` : ''}
+        </p>
+      </header>
+
+      <div className="adm-tabs" role="tablist" aria-label="Secciones de administración">
+        {tabs.map((t) => (
+          <button
+            key={t.clave}
+            type="button"
+            role="tab"
+            aria-selected={pestana === t.clave}
+            className="adm-tab"
+            onClick={() => setPestana(t.clave)}
+          >
+            {t.texto}
+            {t.cuenta !== undefined && t.cuenta > 0 && (
+              <span className={`ui-badge ${t.clave === 'solicitudes' ? 'ui-badge--warning' : 'ui-badge--muted'}`}>{t.cuenta}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div role="alert" className="ui-alert ui-alert--error" style={{ marginBottom: '1rem' }}>
+          <AlertIcon className="ui-alert__icon" />
+          <p>{error}</p>
+        </div>
+      )}
+      {mensaje && !error && (
+        <div role="status" className="org-mensaje-ok" style={{ marginBottom: '1rem' }}>
+          <p>{mensaje}</p>
+        </div>
+      )}
+
+      {cargando ? (
+        <p className="adm-vacio" aria-busy="true">
+          Cargando...
+        </p>
+      ) : (
+        <div role="tabpanel">
+          {pestana === 'solicitudes' && (
+            <SolicitudesPanel solicitudes={solicitudes} roles={roles} sedes={sedes} onCambio={alCambiar} onError={alFallar} />
+          )}
+          {pestana === 'miembros' && (
+            <MiembrosPanel
+              miembros={activos}
+              roles={roles}
+              sedes={sedes}
+              usuarioActualId={usuarioActualId}
+              organizacionId={organizacionId}
+              propietarioId={propietarioId}
+              onCambio={alCambiar}
+              onError={alFallar}
+            />
+          )}
+          {pestana === 'invitaciones' && (
+            <InvitacionesPanel
+              slug={slug}
+              invitaciones={invitaciones}
+              roles={roles}
+              sedes={sedes}
+              onCambio={alCambiar}
+              onError={alFallar}
+            />
+          )}
+        </div>
+      )}
+    </main>
+  );
+}

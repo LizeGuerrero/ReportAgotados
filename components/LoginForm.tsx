@@ -8,11 +8,13 @@ import { AlertIcon, ArrowLeftIcon } from '@/components/ui/icons';
 
 interface Props {
   onVolver: () => void;
+  /** Correo precargado (p. ej. el de una invitación). */
+  emailInicial?: string;
 }
 
-export function LoginForm({ onVolver }: Props) {
+export function LoginForm({ onVolver, emailInicial }: Props) {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(emailInicial ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);

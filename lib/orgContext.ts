@@ -7,6 +7,8 @@ export interface ContextoOrg {
   iniciales: string;
   /** Módulos que el usuario puede ver, según tiene_permiso() en la base de datos. */
   permisos: { agotados: boolean; pedidos: boolean };
+  /** Administrador activo de esta organización (rol "admin"). */
+  esAdmin: boolean;
 }
 
 /**
@@ -35,10 +37,11 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
       p_accion: 'ver',
     });
 
-  const [perfil, agotados, pedidos] = await Promise.all([
+  const [perfil, agotados, pedidos, admin] = await Promise.all([
     supabase.from('profiles').select('nombres, apellidos, username').eq('id', user.id).maybeSingle(),
     permiso('reporte_agotados'),
     permiso('pedidos'),
+    supabase.rpc('es_admin_org', { p_org: organizacion.id }),
   ]);
 
   const nombres = perfil.data?.nombres?.trim() ?? '';
@@ -53,5 +56,6 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
     nombreUsuario,
     iniciales,
     permisos: { agotados: agotados.data === true, pedidos: pedidos.data === true },
+    esAdmin: admin.data === true,
   };
 });

@@ -14,6 +14,8 @@ import type { RegistroCorreoInput, TipoDocumento } from '@/types/auth.types';
 interface Props {
   onVolver: () => void;
   onIrALogin: () => void;
+  /** Correo al que va dirigida una invitación: se precarga y no se puede cambiar. */
+  emailInvitacion?: string;
 }
 
 const inicial: RegistroCorreoInput = {
@@ -28,10 +30,10 @@ const inicial: RegistroCorreoInput = {
   numero_celular: '',
 };
 
-export function RegisterForm({ onVolver, onIrALogin }: Props) {
+export function RegisterForm({ onVolver, onIrALogin, emailInvitacion }: Props) {
   const supabase = createClient();
   const router = useRouter();
-  const [form, setForm] = useState<RegistroCorreoInput>(inicial);
+  const [form, setForm] = useState<RegistroCorreoInput>({ ...inicial, email: emailInvitacion ?? '' });
   const [error, setError] = useState<string | null>(null);
   const [cuentaExistente, setCuentaExistente] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -91,7 +93,7 @@ export function RegisterForm({ onVolver, onIrALogin }: Props) {
         yaExiste
           ? 'Ya existe una cuenta con este correo.'
           : usernameEnUso
-          ? 'Ese nombre de usuario ya está en uso, elige otro.'
+          ? 'Ese nombre de usuario o ese documento ya está registrado. Revisa tus datos.'
           : signUpError.message
       );
       setCuentaExistente(yaExiste);
@@ -152,6 +154,7 @@ export function RegisterForm({ onVolver, onIrALogin }: Props) {
             placeholder="nombre@empresa.com"
             value={form.email}
             onChange={(e) => set('email', e.target.value)}
+            readOnly={!!emailInvitacion}
             autoComplete="email"
             autoCapitalize="none"
             spellCheck={false}

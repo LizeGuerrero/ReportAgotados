@@ -25,6 +25,8 @@ export interface Organizacion {
   slug: string;
   nombre: string;
   activo: boolean;
+  /** NIT / CC / otro. Sirve para ubicar la organización; NO es una credencial. */
+  identificacion?: string | null;
 }
 
 /** Coincide con la tabla public.roles */
@@ -67,4 +69,38 @@ export interface CompletarPerfilInput {
   codigo_pais: string;
   numero_celular: string;
   foto_perfil?: File | null;
+}
+
+/** Estado de una invitación (la "vencida" se deduce de expira_en en la base). */
+export type EstadoInvitacion = 'pendiente' | 'aceptada' | 'rechazada' | 'cancelada' | 'vencida';
+
+/** Fila devuelta por la RPC listar_miembros (solo admin). */
+export interface MiembroOrg {
+  membresia_id: string;
+  usuario_id: string;
+  nombres: string | null;
+  apellidos: string | null;
+  email: string | null;
+  tipo_documento: string | null;
+  numero_documento: string | null;
+  rol_id: string;
+  rol_nombre: string;
+  sede_id: string | null;
+  sede_nombre: string | null;
+  estado: EstadoMembresia;
+  activo: boolean;
+  fecha_ingreso: string;
+}
+
+/** Fila devuelta por la RPC listar_invitaciones (solo admin). */
+export interface InvitacionOrg {
+  id: string;
+  email: string;
+  rol_id: string;
+  rol_nombre: string;
+  sede_nombre: string | null;
+  estado: EstadoInvitacion;
+  creada_en: string;
+  expira_en: string;
+  invitado_por_nombre: string | null;
 }

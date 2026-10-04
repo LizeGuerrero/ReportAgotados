@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { LoginForm } from '@/components/LoginForm';
 import { RegisterForm } from '@/components/RegisterForm';
@@ -11,6 +11,22 @@ export default function LoginPage() {
   const supabase = createClient();
   const [modo, setModo] = useState<'login' | 'registro'>('login');
   const [metodo, setMetodo] = useState<'email' | null>(null);
+  // Si se llegó desde un enlace de invitación (?invite=TOKEN) se muestra a qué organización
+  // y se abre directamente el registro. El token en sí lo guarda el proxy en una cookie.
+  const [invitacion, setInvitacion] = useState<{ organizacion: string; email: string } | null>(null);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('invite');
+    if (!token) return;
+    supabase.rpc('info_invitacion', { p_token: token }).then(({ data }) => {
+      const fila = Array.isArray(data) ? data[0] : null;
+      if (fila?.valida && fila.organizacion && fila.email) {
+        setInvitacion({ organizacion: fila.organizacion, email: fila.email });
+        setModo('registro');
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function iniciarConGoogle() {
     await supabase.auth.signInWithOAuth({
@@ -32,7 +48,9 @@ export default function LoginPage() {
     <AuthShell
       titulo={registrando ? 'Crea tu cuenta' : 'Inicia sesión'}
       subtitulo={
-        registrando
+        invitacion
+          ? `Te invitaron a unirte a ${invitacion.organizacion}. Usa el correo ${invitacion.email} para aceptar la invitación.`
+          : registrando
           ? 'Completa tus datos para empezar a usar la plataforma.'
           : 'Accede con tu cuenta para continuar.'
       }
@@ -58,9 +76,15 @@ export default function LoginPage() {
         </div>
       )}
 
-      {metodo === 'email' && modo === 'login' && <LoginForm onVolver={() => setMetodo(null)} />}
+      {metodo === 'email' && modo === 'login' && (
+        <LoginForm onVolver={() => setMetodo(null)} emailInicial={invitacion?.email} />
+      )}
       {metodo === 'email' && modo === 'registro' && (
-        <RegisterForm onVolver={() => setMetodo(null)} onIrALogin={() => setModo('login')} />
+        <RegisterForm
+          onVolver={() => setMetodo(null)}
+          onIrALogin={() => setModo('login')}
+          emailInvitacion={invitacion?.email}
+        />
       )}
 
       <p className="auth-switch">

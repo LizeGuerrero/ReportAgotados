@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from './lib/supabase/middleware';
+import { MODULOS_PROTEGIDOS } from './lib/modulos';
 
 // Rutas que no requieren sesión
 const RUTAS_PUBLICAS = ['/login', '/auth/callback', '/recuperar-password', '/api/auth/login'];
@@ -7,6 +8,12 @@ const RUTAS_PUBLICAS = ['/login', '/auth/callback', '/recuperar-password', '/api
 // Requiere sesión, pero NO debe forzar "completa tu perfil" primero:
 // si alguien está recuperando su contraseña, eso es más urgente.
 const RUTAS_EXENTAS_DE_PERFIL = ['/actualizar-password'];
+
+// Enlace de invitación (/unirse?invite=TOKEN o /login?invite=TOKEN): el token se guarda en
+// una cookie httpOnly para que sobreviva al registro, a la confirmación del correo, a Google
+// y a "completar perfil". Quien tenga la cookie es enviado a /unirse desde la página de inicio.
+const COOKIE_INVITACION = 'invite_token';
+const FORMATO_TOKEN = /^[A-Za-z0-9_-]{20,64}$/;
 
 export async function proxy(request: NextRequest) {
   const { supabase, response } = createClient(request);
@@ -23,8 +30,23 @@ export async function proxy(request: NextRequest) {
 
   const esRutaPublica = RUTAS_PUBLICAS.some((r) => pathname.startsWith(r));
 
+  const tokenParam = request.nextUrl.searchParams.get('invite');
+  const tokenInvitacion =
+    (pathname === '/unirse' || pathname === '/login') && tokenParam && FORMATO_TOKEN.test(tokenParam)
+      ? tokenParam
+      : null;
+
   function sinCache(res: NextResponse) {
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    if (tokenInvitacion) {
+      res.cookies.set(COOKIE_INVITACION, tokenInvitacion, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 3,
+      });
+    }
     return res;
   }
 
@@ -66,13 +88,15 @@ export async function proxy(request: NextRequest) {
       return sinCache(NextResponse.redirect(url));
     }
 
-    // 4. Ejemplo: exigir membresía activa para entrar a /app/[organizacion]
+    // 4. Exigir membresía activa para entrar a /app/[organizacion] y, dentro de ella,
+    //    permiso de "ver" para los módulos protegidos (la base de datos igual lo exige en cada RPC;
+    //    esto evita mostrar la pantalla del módulo a quien solo conoce la URL).
     if (!esRutaPublica && pathname.startsWith('/app/')) {
       const slugOrganizacion = pathname.split('/')[2];
 
       const { data: membresia } = await supabase
         .from('membresias')
-        .select('estado_membresia, activo, organizaciones!inner(slug)')
+        .select('estado_membresia, activo, organizaciones!inner(id, slug)')
         .eq('usuario_id', user.id)
         .eq('organizaciones.slug', slugOrganizacion)
         .eq('activo', true)
@@ -83,6 +107,32 @@ export async function proxy(request: NextRequest) {
         const url = request.nextUrl.clone();
         url.pathname = '/sin-acceso';
         return NextResponse.redirect(url);
+      }
+
+      const segmento = pathname.split('/')[3];
+      const modulo = segmento ? MODULOS_PROTEGIDOS[segmento] : undefined;
+      if (modulo) {
+        const org = Array.isArray(membresia.organizaciones)
+          ? membresia.organizaciones[0]
+          : membresia.organizaciones;
+        const { data: permitido } = await supabase.rpc('tiene_permiso', {
+          p_organizacion_id: org?.id,
+          p_modulo: modulo.permiso,
+          p_accion: 'ver',
+        });
+
+        if (permitido !== true) {
+          // rewrite (no redirect): la URL no cambia y se muestra la pantalla "No autorizado"
+          // dentro del layout de la organización.
+          const url = request.nextUrl.clone();
+          url.pathname = `/app/${slugOrganizacion}/no-autorizado`;
+          url.search = '';
+          url.searchParams.set('modulo', segmento);
+          const res = NextResponse.rewrite(url);
+          // conserva las cookies de sesión que el cliente de Supabase haya refrescado
+          response.cookies.getAll().forEach((c) => res.cookies.set(c));
+          return sinCache(res);
+        }
       }
     }
   }

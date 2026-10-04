@@ -82,7 +82,11 @@ export function CompleteProfileForm({ userId, nombresIniciales = '', apellidosIn
       .eq('id', userId);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(
+        updateError.code === '23505'
+          ? 'Ese nombre de usuario o ese documento ya está registrado. Revisa tus datos.'
+          : updateError.message
+      );
       setCargando(false);
       return;
     }
