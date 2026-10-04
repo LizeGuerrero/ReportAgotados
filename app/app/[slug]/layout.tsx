@@ -21,6 +21,7 @@ export default async function OrganizacionLayout({
   if (ctx.permisos.agotados) modulos.push({ clave: 'agotados', texto: 'Agotados', href: `${base}/agotados` });
   // El botón de Pedidos solo existe para quien tiene permiso de ver ese módulo.
   if (ctx.permisos.pedidos) modulos.push({ clave: 'pedidos', texto: 'Pedidos', href: `${base}/pedidos` });
+  if (ctx.permisos.items) modulos.push({ clave: 'items', texto: 'Ítems', href: `${base}/items` });
   // Panel de la organización: solo administradores.
   if (ctx.esAdmin) modulos.push({ clave: 'admin', texto: 'Administración', href: `${base}/admin` });
 

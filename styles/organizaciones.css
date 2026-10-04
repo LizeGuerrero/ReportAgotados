@@ -231,3 +231,167 @@
     margin-bottom: 0.5rem;
   }
 }
+
+/* ---- Panel de roles ---- */
+.adm-roles {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 52rem) {
+  .adm-roles {
+    grid-template-columns: minmax(13rem, 17rem) 1fr;
+    align-items: start;
+  }
+}
+.adm-roles__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-roles__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.adm-roles__item:hover {
+  background-color: var(--color-surface-hover);
+}
+.adm-roles__item[aria-current="true"] {
+  font-weight: 600;
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-border);
+}
+.adm-roles__item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.adm-roles__cuenta {
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+.adm-roles__nuevo {
+  display: grid;
+  gap: 0.625rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.adm-editor__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+.adm-editor__head h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+.adm-editor__datos {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  align-items: end;
+  margin-bottom: 1.25rem;
+}
+.adm-tabla--matriz {
+  min-width: 0;
+}
+.adm-tabla--matriz th:not(:first-child),
+.adm-tabla--matriz td:not(:first-child) {
+  width: 4.5rem;
+  text-align: center;
+}
+.adm-modulo {
+  display: flex;
+  flex-direction: column;
+}
+.adm-modulo strong {
+  font-weight: 600;
+}
+.adm-modulo span {
+  font-size: 0.8125rem;
+  color: var(--color-text-subtle);
+}
+.adm-check {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--color-ink);
+}
+.adm-check:disabled {
+  cursor: not-allowed;
+}
+.adm-editor__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* ---- Sedes, historial, comparación ---- */
+.adm-nowrap {
+  white-space: nowrap;
+}
+.adm-leyenda {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-subtle);
+}
+.adm-comparacion th:not(:first-child),
+.adm-comparacion td:not(:first-child) {
+  text-align: center;
+  white-space: nowrap;
+}
+.adm-comparacion td:not(:first-child) {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.adm-vacio-celda {
+  color: var(--color-text-subtle);
+}
+.adm-miembros-rol {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.375rem;
+}
+.adm-miembros-rol li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+.adm-miembros-rol li span {
+  color: var(--color-text-subtle);
+  overflow-wrap: anywhere;
+}
+.adm-subtitulo {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}

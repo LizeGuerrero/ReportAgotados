@@ -14,6 +14,7 @@ export default async function OrganizacionInicio({ params }: { params: Promise<{
   const base = `/app/${encodeURIComponent(slug)}`;
   if (ctx.permisos.agotados) redirect(`${base}/agotados`);
   if (ctx.permisos.pedidos) redirect(`${base}/pedidos`);
+  if (ctx.permisos.items) redirect(`${base}/items`);
 
   if (ctx.esAdmin) redirect(`${base}/admin`);
 

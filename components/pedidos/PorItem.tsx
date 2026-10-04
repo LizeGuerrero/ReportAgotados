@@ -25,6 +25,7 @@ interface ProveedorDeItem {
 
 interface ItemCatalogo {
   item_id: number;
+  codigo: string | null;
   nombre_base: string;
   linea: string | null;
   unidad_medida: string | null;
@@ -281,7 +282,7 @@ export default function PorItem({
                       aria-label={`Incluir ítem ${i.item_id}`}
                     />
                   </td>
-                  <td style={celda}>{idVisible(i.item_id, i.provisional)}</td>
+                  <td style={celda}>{idVisible(i.item_id, i.provisional, i.codigo)}</td>
                   <td style={celda}>
                     {i.nombre_base}
                     {i.provisional && <div style={{ fontSize: 11 }}>Ítem provisional (aún sin ID del ERP)</div>}

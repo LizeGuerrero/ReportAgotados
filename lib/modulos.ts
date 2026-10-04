@@ -6,6 +6,7 @@
 export const MODULOS_PROTEGIDOS: Record<string, { permiso: string; nombre: string }> = {
   agotados: { permiso: 'reporte_agotados', nombre: 'Agotados' },
   pedidos: { permiso: 'pedidos', nombre: 'Pedidos' },
+  items: { permiso: 'Items', nombre: 'Ítems' },
 };
 
 /** Nombre para mostrar de un segmento de URL protegido (incluye el panel de administración). */

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { etiquetaRol, ROL_PREDETERMINADO } from '@/lib/roles';
 import type { MiembroOrg } from '@/types/auth.types';
 import { fmtFecha, nombrePersona, type RolOpt, type SedeOpt } from './tipos';
+import { reglasMiembro } from './reglas';
 
 interface Props {
   miembros: MiembroOrg[];
@@ -33,15 +34,14 @@ function Fila({
   const [sedeId, setSedeId] = useState(m.sede_id ?? '');
   const [trabajando, setTrabajando] = useState(false);
 
-  const esYo = m.usuario_id === usuarioActualId;
-  const esPropietario = propietarioId !== null && m.usuario_id === propietarioId;
-  const soyPropietario = propietarioId !== null && usuarioActualId === propietarioId;
-  const esAdmin = m.rol_nombre === 'admin';
-  // Mismas reglas que aplica la base de datos (aquí solo evitan ofrecer un botón que fallaría):
-  // nadie cambia su propio rol, nadie cambia el del propietario, y con propietario solo él
-  // puede quitarle el rol de admin a otro admin.
-  const rolBloqueado = esYo || esPropietario || (esAdmin && propietarioId !== null && !soyPropietario);
-  const puedeTransferir = soyPropietario && esAdmin && !esYo;
+  const { esYo, esPropietario, rolBloqueado, puedeTransferir, puedeGestionarEstado } = reglasMiembro(
+    m,
+    usuarioActualId,
+    propietarioId
+  );
+  const suspendida = m.estado === 'suspendida';
+  // Solo se edita rol y sede de miembros activos (la base de datos también lo exige).
+  const editable = m.estado === 'activa';
   const cambioRol = rolId !== m.rol_id;
   const cambioSede = sedeId !== (m.sede_id ?? '');
   const rolNombre = roles.find((r) => r.id === rolId)?.nombre;
@@ -56,6 +56,31 @@ function Fila({
     setTrabajando(false);
     if (error) return onError(error.message);
     onCambio(`Se actualizó a ${nombrePersona(m)}.`);
+  }
+
+  async function cambiarEstado(accion: 'suspender' | 'reactivar' | 'retirar') {
+    const nombre = nombrePersona(m);
+    const aviso =
+      accion === 'suspender'
+        ? `¿Suspender a ${nombre}? Perderá el acceso de inmediato, pero podrás reactivarlo cuando quieras.`
+        : accion === 'retirar'
+        ? `¿Retirar a ${nombre} de la organización? Dejará de aparecer aquí y perderá el acceso. Podrá volver a solicitar el ingreso o ser invitado de nuevo.`
+        : null;
+    if (aviso && !window.confirm(aviso)) return;
+    setTrabajando(true);
+    const { error } = await supabase.rpc('cambiar_estado_miembro', {
+      p_membresia: m.membresia_id,
+      p_accion: accion,
+    });
+    setTrabajando(false);
+    if (error) return onError(error.message);
+    onCambio(
+      accion === 'suspender'
+        ? `${nombre} fue suspendido.`
+        : accion === 'reactivar'
+        ? `${nombre} fue reactivado.`
+        : `${nombre} fue retirado de la organización.`
+    );
   }
 
   async function transferir() {
@@ -87,6 +112,12 @@ function Fila({
                 <span className="ui-badge ui-badge--info">Propietario</span>
               </>
             )}
+            {suspendida && (
+              <>
+                {' '}
+                <span className="ui-badge ui-badge--warning">Suspendido</span>
+              </>
+            )}
           </strong>
           <span>{m.email}</span>
         </div>
@@ -99,7 +130,7 @@ function Fila({
           aria-label={`Rol de ${nombrePersona(m)}`}
           value={rolId}
           onChange={(e) => setRolId(e.target.value)}
-          disabled={rolBloqueado}
+          disabled={rolBloqueado || !editable}
         >
           {roles.map((r) => (
             <option key={r.id} value={r.id}>
@@ -125,6 +156,7 @@ function Fila({
           aria-label={`Sede de ${nombrePersona(m)}`}
           value={sedeId}
           onChange={(e) => setSedeId(e.target.value)}
+          disabled={!editable}
         >
           {!m.sede_id && <option value="">Sin sede</option>}
           {sedes.map((x) => (
@@ -142,11 +174,31 @@ function Fila({
           <button
             type="button"
             className="ui-btn ui-btn--primary ui-btn--sm"
-            disabled={trabajando || (!cambioRol && !cambioSede)}
+            disabled={trabajando || !editable || (!cambioRol && !cambioSede)}
             onClick={guardar}
           >
             Guardar
           </button>
+          {puedeGestionarEstado && suspendida && (
+            <button type="button" className="ui-btn ui-btn--sm" disabled={trabajando} onClick={() => cambiarEstado('reactivar')}>
+              Reactivar
+            </button>
+          )}
+          {puedeGestionarEstado && !suspendida && (
+            <button type="button" className="ui-btn ui-btn--sm" disabled={trabajando} onClick={() => cambiarEstado('suspender')}>
+              Suspender
+            </button>
+          )}
+          {puedeGestionarEstado && (
+            <button
+              type="button"
+              className="ui-btn ui-btn--danger ui-btn--sm"
+              disabled={trabajando}
+              onClick={() => cambiarEstado('retirar')}
+            >
+              Retirar
+            </button>
+          )}
           {puedeTransferir && (
             <button type="button" className="ui-btn ui-btn--sm" disabled={trabajando} onClick={transferir}>
               Hacer propietario
@@ -176,7 +228,7 @@ export function MiembrosPanel({ miembros, ...resto }: Props) {
           </thead>
           <tbody>
             {miembros.map((m) => (
-              <Fila key={`${m.membresia_id}:${m.rol_id}:${m.sede_id}`} m={m} {...resto} />
+              <Fila key={`${m.membresia_id}:${m.rol_id}:${m.sede_id}:${m.estado}`} m={m} {...resto} />
             ))}
           </tbody>
         </table>

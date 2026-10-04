@@ -34,6 +34,7 @@ interface Celda {
 
 interface FilaMatriz {
   item_id: number;
+  codigo: string | null;
   nombre_base: string;
   linea: string | null;
   unidad_medida: string | null;
@@ -220,7 +221,7 @@ export default function Comparativo({
               const mejor = conIva.length > 0 ? Math.min(...conIva) : null;
               return (
                 <tr key={f.item_id} style={{ verticalAlign: 'top' }}>
-                  <td style={celda}>{idVisible(f.item_id, f.provisional)}</td>
+                  <td style={celda}>{idVisible(f.item_id, f.provisional, f.codigo)}</td>
                   <td style={celda}>
                     {f.nombre_base}
                     {f.agotado_sedes && <div style={{ fontSize: 11 }}>Agotado en {f.agotado_sedes.join(', ')}</div>}

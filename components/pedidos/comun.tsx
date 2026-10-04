@@ -107,6 +107,7 @@ export interface SedePedido {
 
 export interface Pedido {
   item_id: number;
+  codigo: string | null;
   nombre_base: string;
   linea: string | null;
   unidad_medida: string | null;
@@ -141,7 +142,9 @@ export interface ProveedorLista {
 }
 
 /** Los ítems provisionales tienen ID negativo interno: se muestran como P1, P2… */
-export function idVisible(itemId: number, provisional: boolean) {
+/** Código que ve el usuario: el del ERP (codigo_erp); si es provisional, P + número. item_id es la clave interna. */
+export function idVisible(itemId: number, provisional: boolean, codigo?: string | null) {
+  if (codigo) return codigo;
   return provisional ? `P${Math.abs(itemId)}` : String(itemId);
 }
 

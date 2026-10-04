@@ -17,6 +17,7 @@ import { construirTablaCopia, copiarAlPortapapeles } from '@/lib/tablaCopia';
 
 interface Fila {
   item_id: number;
+  codigo: string | null;
   nombre_base: string;
   referencia: string | null;
   linea: string | null;
@@ -99,7 +100,7 @@ interface Columna {
 }
 
 const COLUMNAS: Columna[] = [
-  { clave: 'item', titulo: 'Item', orden: 'item', clase: 'ag-col-num', texto: (f) => String(f.item_id) },
+  { clave: 'item', titulo: 'Item', orden: 'item', clase: 'ag-col-num', texto: (f) => f.codigo ?? String(f.item_id) },
   { clave: 'nombre', titulo: 'Nombre Base', orden: 'nombre', clase: 'ag-col-nombre', texto: (f) => f.nombre_base },
   { clave: 'referencia', titulo: 'Referencia', orden: 'referencia', texto: (f) => f.referencia ?? '' },
   { clave: 'linea', titulo: 'Línea', orden: 'linea', texto: (f) => f.linea ?? '' },
@@ -747,7 +748,7 @@ export default function ReporteAgotados({ organizacionId }: { organizacionId: st
       const contenido = datos.then((lista) => {
         if (lista.length === 0) throw new SinDatos('No hay solicitudes de pedido activas.');
         const cols: { titulo: string; texto: (f: Fila) => string }[] = [
-          { titulo: 'Item', texto: (f) => String(f.item_id) },
+          { titulo: 'Item', texto: (f) => f.codigo ?? String(f.item_id) },
           { titulo: 'Nombre Base', texto: (f) => f.nombre_base },
           { titulo: 'Referencia', texto: (f) => f.referencia ?? '' },
           { titulo: 'Línea', texto: (f) => f.linea ?? '' },
@@ -763,7 +764,7 @@ export default function ReporteAgotados({ organizacionId }: { organizacionId: st
         );
         const hoy = new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
         const lineas = lista.map((f, i) => {
-          const partes = [`${i + 1}. [${f.item_id}] ${f.nombre_base}`];
+          const partes = [`${i + 1}. [${f.codigo ?? f.item_id}] ${f.nombre_base}`];
           if (f.referencia) partes.push(`Ref: ${f.referencia}`);
           if (f.cantidad_sugerida !== null) partes.push(`Cant: ${f.cantidad_sugerida}`);
           if (f.notas) partes.push(`Nota: ${f.notas.replace(/\s+/g, ' ')}`);
@@ -1251,7 +1252,7 @@ function FilaAgotado({
   const celdas: Record<string, React.ReactNode> = {
     item: (
       <>
-        {f.item_id}
+        {f.codigo ?? f.item_id}
         {/* Tirador de alto de fila, como el encabezado de fila de una hoja de cálculo */}
         <span
           className="ag-rowresizer"

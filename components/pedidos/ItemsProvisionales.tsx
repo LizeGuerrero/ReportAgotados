@@ -59,21 +59,21 @@ export default function ItemsProvisionales({
   useTiempoReal(supabase, organizacionId, TABLAS_PEDIDOS, cargar);
 
   async function vincular(f: Provisional) {
-    const real = Number(ids[f.item_id] ?? '');
-    if (!real || real <= 0) {
-      setError('Escribe el ID que el ERP asignó al ítem');
+    const real = (ids[f.item_id] ?? '').trim();
+    if (!real) {
+      setError('Escribe el código que el ERP asignó al ítem');
       return;
     }
     const ok = window.confirm(
-      `¿Vincular “${f.nombre_base}” con el ID ${real}?\n\n` +
-        'Si ese ID ya existe en el catálogo, se fusionará con ese ítem. Esta acción no se puede deshacer.',
+      `¿Vincular “${f.nombre_base}” con el código ${real}?\n\n` +
+        'Si ese código ya existe en el catálogo, se fusionará con ese ítem. Esta acción no se puede deshacer.',
     );
     if (!ok) return;
     setTrabajando(f.item_id);
     const { error } = await supabase.rpc('item_provisional_vincular', {
       p_org: organizacionId,
       p_provisional: f.item_id,
-      p_id_real: real,
+      p_codigo: real,
     });
     setTrabajando(null);
     if (error) {
@@ -111,7 +111,7 @@ export default function ItemsProvisionales({
         <table style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead>
             <tr>
-              {['Ref.', 'Nombre', 'Línea', 'IVA', 'Creado', 'Solicitudes activas', 'Órdenes', 'ID del ERP'].map((h) => (
+              {['Ref.', 'Nombre', 'Línea', 'IVA', 'Creado', 'Solicitudes activas', 'Órdenes', 'Código del ERP'].map((h) => (
                 <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
               ))}
             </tr>
@@ -131,8 +131,7 @@ export default function ItemsProvisionales({
                     <div style={{ display: 'flex', gap: 6 }}>
                       <input
                         value={ids[f.item_id] ?? ''}
-                        inputMode="numeric"
-                        placeholder="ID real"
+                        placeholder="Código ERP"
                         onChange={(e) => setIds((x) => ({ ...x, [f.item_id]: e.target.value.replace(/\D/g, '') }))}
                         style={{ ...campo, width: 110, padding: 3 }}
                         aria-label={`ID del ERP para ${f.nombre_base}`}

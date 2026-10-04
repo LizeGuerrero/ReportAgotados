@@ -8,6 +8,7 @@ import { boton, celda, fecha, pesos, PanelTexto, TABLAS_PEDIDOS, textoCajas } fr
 interface LineaPorGenerar {
   cotizacion_id: string;
   item_id: number;
+  codigo: string | null;
   nombre_base: string;
   linea: string | null;
   referencia: string | null;
@@ -29,6 +30,7 @@ interface PorGenerar {
 
 interface LineaOrden {
   item_id: number;
+  codigo: string | null;
   nombre_base: string;
   linea: string | null;
   cantidad: number;
@@ -148,7 +150,7 @@ export default function OrdenesCompra({
               <tbody>
                 {p.lineas.map((l) => (
                   <tr key={l.cotizacion_id}>
-                    <td style={celda}>{l.item_id}</td>
+                    <td style={celda}>{l.codigo ?? l.item_id}</td>
                     <td style={celda}>{l.nombre_base}</td>
                     <td style={celda}>{l.linea ?? ''}</td>
                     <td style={celda}>{l.referencia ?? ''}</td>
@@ -189,7 +191,7 @@ export default function OrdenesCompra({
                     <summary style={{ cursor: 'pointer' }}>{o.items.length} ítem(s)</summary>
                     {o.items.map((l) => (
                       <div key={l.item_id} style={{ fontSize: 12 }}>
-                        {l.item_id} · {l.nombre_base} · {l.cantidad}
+                        {l.codigo ?? l.item_id} · {l.nombre_base} · {l.cantidad}
                         {l.unidades_por_caja ? ` (${textoCajas(l.cantidad, l.unidades_por_caja)})` : ''} · {pesos(l.costo_unitario)}
                       </div>
                     ))}

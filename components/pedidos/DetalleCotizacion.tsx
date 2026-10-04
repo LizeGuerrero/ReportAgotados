@@ -124,7 +124,7 @@ export default function DetalleCotizacion({
     <div>
       <button type="button" style={boton} onClick={onVolver}>← Volver a pedidos</button>
       <h2 style={{ fontSize: 17, margin: '12px 0 4px' }}>
-        Item {idVisible(pedido.item_id, pedido.provisional)} — {pedido.nombre_base}
+        Item {idVisible(pedido.item_id, pedido.provisional, pedido.codigo)} — {pedido.nombre_base}
       </h2>
       <div style={{ fontSize: 13, marginBottom: 12 }}>
         Línea: {pedido.linea ?? '-'} · IVA: {Math.round((pedido.iva ?? 0) * 100)}% ·{' '}

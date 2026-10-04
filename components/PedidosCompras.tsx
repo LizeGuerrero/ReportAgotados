@@ -154,7 +154,7 @@ function ListaPedidos({
         if (!vigente || error) return;
         const f = ((data ?? []) as Pedido[]).find((x) => x.item_id === detalle.item_id);
         if (!f) {
-          setAviso(`El ítem ${idVisible(detalle.item_id, detalle.provisional)} — ${detalle.nombre_base} ya no está pendiente de gestión.`);
+          setAviso(`El ítem ${idVisible(detalle.item_id, detalle.provisional, detalle.codigo)} — ${detalle.nombre_base} ya no está pendiente de gestión.`);
           setDetalle(null);
         } else if (JSON.stringify({ ...f, total: 0 }) !== JSON.stringify({ ...detalle, total: 0 })) {
           setDetalle(f);
@@ -246,7 +246,7 @@ function ListaPedidos({
           <tbody>
             {filas.map((p) => (
               <tr key={p.item_id}>
-                <td style={celda}>{idVisible(p.item_id, p.provisional)}</td>
+                <td style={celda}>{idVisible(p.item_id, p.provisional, p.codigo)}</td>
                 <td style={celda}>
                   {p.nombre_base}
                   {p.origen === 'manual' && (

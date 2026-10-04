@@ -104,3 +104,48 @@ export interface InvitacionOrg {
   expira_en: string;
   invitado_por_nombre: string | null;
 }
+
+/** Fila devuelta por la RPC listar_roles_org (solo admin). */
+export interface RolAdmin {
+  rol_id: string;
+  nombre: string;
+  descripcion: string | null;
+  /** Roles del sistema (admin y viewer/Predeterminado): no se editan ni eliminan. */
+  protegido: boolean;
+  miembros: number;
+  invitaciones_pendientes: number;
+}
+
+/** Fila devuelta por la RPC listar_permisos_org (solo admin). */
+export interface PermisoRol {
+  rol_id: string;
+  modulo_id: string;
+  puede_ver: boolean;
+  puede_crear: boolean;
+  puede_editar: boolean;
+  puede_eliminar: boolean;
+}
+
+export interface ModuloOpt {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+}
+
+/** Fila devuelta por la RPC listar_sedes_org (solo admin). */
+export interface SedeAdmin {
+  sede_id: string;
+  nombre: string;
+  ciudad: string | null;
+  miembros: number;
+  creada_en: string;
+}
+
+/** Fila devuelta por la RPC listar_auditoria (solo admin). */
+export interface AuditoriaItem {
+  id: number;
+  fecha: string;
+  usuario: string;
+  accion: string;
+  descripcion: string;
+}
