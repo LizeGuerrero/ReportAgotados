@@ -5,7 +5,33 @@ import { createClient } from '@/lib/supabase/client';
 import { usePermisos } from '@/components/items/usePermisos';
 import { crearXlsx, descargar, leerArchivo, type Tabla } from '@/components/importaciones/archivo';
 import { DEFINICIONES, definicion, mapeoAutomatico, plantillaXlsx, type TipoCarga } from '@/components/importaciones/plantillas';
-import { boton, campo, celda, fecha } from '@/components/pedidos/comun';
+import { fecha } from '@/components/pedidos/comun';
+
+/* Estilos locales de esta pantalla (antes vivían en pedidos/comun). Usan los tokens de tokens.css para respetar modo claro/oscuro. */
+const boton: React.CSSProperties = {
+  padding: '0.35rem 0.75rem',
+  fontSize: '0.8125rem',
+  color: 'var(--color-text)',
+  background: 'var(--color-surface)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-sm)',
+  cursor: 'pointer',
+};
+const campo: React.CSSProperties = {
+  padding: '0.35rem 0.5rem',
+  fontSize: '0.8125rem',
+  color: 'var(--color-text)',
+  background: 'var(--color-input)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-sm)',
+};
+const celda: React.CSSProperties = {
+  padding: '0.4rem 0.6rem',
+  fontSize: '0.8125rem',
+  textAlign: 'left',
+  verticalAlign: 'top',
+  border: '1px solid var(--color-border)',
+};
 
 interface Resumen {
   total?: number;
@@ -289,7 +315,7 @@ export default function Importaciones({ organizacionId }: { organizacionId: stri
           <p style={{ fontSize: 12, margin: '0 0 8px' }}>Revisa qué columna de tu archivo corresponde a cada dato. Lo detecté automáticamente; corrígelo si hace falta.</p>
           <table style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr>{['Dato del sistema', 'Obligatorio', 'Columna de tu archivo', 'Primer valor'].map((h) => <th key={h} style={{ ...celda, background: '#eee' }}>{h}</th>)}</tr>
+              <tr>{['Dato del sistema', 'Obligatorio', 'Columna de tu archivo', 'Primer valor'].map((h) => <th key={h} style={{ ...celda, background: 'var(--color-table-head)' }}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {def.campos.map((c) => {
@@ -304,7 +330,7 @@ export default function Importaciones({ organizacionId }: { organizacionId: stri
                         {tabla.columnas.map((col, i) => <option key={i} value={i}>{col}</option>)}
                       </select>
                     </td>
-                    <td style={{ ...celda, color: '#555' }}>{idx != null ? tabla.filas[0].v[idx] : ''}</td>
+                    <td style={{ ...celda, color: 'var(--color-text-muted)' }}>{idx != null ? tabla.filas[0].v[idx] : ''}</td>
                   </tr>
                 );
               })}
@@ -341,14 +367,14 @@ export default function Importaciones({ organizacionId }: { organizacionId: stri
               ? ([['', 'Todas'], ['aplicada', 'Aplicadas'], ['error', 'Con error']] as [Filtro, string][])
               : ([['error', `Con error (${n0(r.errores)})`], ['nueva', `Nuevas (${n0(r.nuevas)})`], ['actualizar', `Por actualizar (${n0(r.actualizar)})`], ['sin_cambios', `Sin cambios (${n0(r.sin_cambios)})`]] as [Filtro, string][])
             ).map(([valor, texto]) => (
-              <button key={valor} type="button" style={{ ...boton, fontWeight: filtro === valor ? 700 : 400, background: filtro === valor ? '#e8e8e8' : '#fff' }}
+              <button key={valor} type="button" style={{ ...boton, fontWeight: filtro === valor ? 700 : 400, background: filtro === valor ? 'var(--color-surface-hover)' : 'var(--color-surface)' }}
                 onClick={() => { setFiltro(valor); setPagina(0); }}>{texto}</button>
             ))}
           </div>
 
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
-              <tr>{['Fila', 'Estado', 'Documento', 'Nombre', 'Detalle'].map((h) => <th key={h} style={{ ...celda, background: '#eee' }}>{h}</th>)}</tr>
+              <tr>{['Fila', 'Estado', 'Documento', 'Nombre', 'Detalle'].map((h) => <th key={h} style={{ ...celda, background: 'var(--color-table-head)' }}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filas.map((f) => {
@@ -399,7 +425,7 @@ export default function Importaciones({ organizacionId }: { organizacionId: stri
       <div style={{ fontWeight: 600, margin: '8px 0' }}>Historial de cargas</div>
       <table style={{ borderCollapse: 'collapse', width: '100%' }}>
         <thead>
-          <tr>{['Fecha', 'Usuario', 'Tipo', 'Archivo', 'Estado', 'Resultado', ''].map((h) => <th key={h} style={{ ...celda, background: '#eee' }}>{h}</th>)}</tr>
+          <tr>{['Fecha', 'Usuario', 'Tipo', 'Archivo', 'Estado', 'Resultado', ''].map((h) => <th key={h} style={{ ...celda, background: 'var(--color-table-head)' }}>{h}</th>)}</tr>
         </thead>
         <tbody>
           {historial.map((h) => (

@@ -11,11 +11,14 @@ export interface PermisosItems {
   provCrear: boolean;
   provEditar: boolean;
   provEliminar: boolean;
+  impVer: boolean;
+  impCrear: boolean;
 }
 
 const VACIO: PermisosItems = {
   cargado: false, itemsCrear: false, itemsEditar: false,
   provVer: false, provCrear: false, provEditar: false, provEliminar: false,
+  impVer: false, impCrear: false,
 };
 
 /**
@@ -42,8 +45,10 @@ export function usePermisos(supabase: SupabaseClient, organizacionId: string): P
       pedir('Proveedores', 'crear'),
       pedir('Proveedores', 'editar'),
       pedir('Proveedores', 'eliminar'),
-    ]).then(([itemsCrear, itemsEditar, provVer, provCrear, provEditar, provEliminar]) => {
-      if (vivo) setP({ cargado: true, itemsCrear, itemsEditar, provVer, provCrear, provEditar, provEliminar });
+      pedir('importaciones', 'ver'),
+      pedir('importaciones', 'crear'),
+    ]).then(([itemsCrear, itemsEditar, provVer, provCrear, provEditar, provEliminar, impVer, impCrear]) => {
+      if (vivo) setP({ cargado: true, itemsCrear, itemsEditar, provVer, provCrear, provEditar, provEliminar, impVer, impCrear });
     });
     return () => {
       vivo = false;

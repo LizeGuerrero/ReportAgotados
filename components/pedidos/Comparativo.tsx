@@ -16,6 +16,7 @@ interface Celda {
   cotizacion_id: string;
   proveedor_id: number;
   proveedor: string;
+  documento: string | null;
   solicitud_numero: string;
   solicitud_estado: string;
   costo_unitario: number | null;
@@ -133,9 +134,9 @@ export default function Comparativo({
 
   // Columnas: todos los proveedores que aparecen en esta página
   const proveedoresPagina = useMemo(() => {
-    const mapa = new Map<number, string>();
-    filas.forEach((f) => f.cotizaciones.forEach((c) => mapa.set(c.proveedor_id, c.proveedor)));
-    return Array.from(mapa, ([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    const mapa = new Map<number, { nombre: string; documento: string | null }>();
+    filas.forEach((f) => f.cotizaciones.forEach((c) => mapa.set(c.proveedor_id, { nombre: c.proveedor, documento: c.documento })));
+    return Array.from(mapa, ([id, v]) => ({ id, nombre: v.nombre, documento: v.documento })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   }, [filas]);
 
   const columnas = proveedor ? proveedoresPagina.filter((p) => String(p.id) === proveedor) : proveedoresPagina;
@@ -177,7 +178,7 @@ export default function Comparativo({
           className="ui-input ui-input--sm mod-auto" style={{ minWidth: 240 }}
         />
         <Combobox
-          opciones={proveedoresPagina.map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: p.documento }))}
+          opciones={proveedoresPagina.map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: p.documento ?? undefined }))}
           valor={proveedor}
           onCambio={setProveedor}
           etiqueta="Proveedor"

@@ -44,3 +44,6 @@ supabase/
 !tests/db/0*.sql
 !tests/db/seed.sql
 !tests/db/stubs.sql
+
+cxp.zip
+backups/
