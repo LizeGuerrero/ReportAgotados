@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import ItemDetalle from '@/components/items/ItemDetalle';
 import { usePermisos } from '@/components/items/usePermisos';
-import { boton, campo, celda, idVisible } from '@/components/pedidos/comun';
+import { idVisible } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface FilaItem {
   item_id: number;
@@ -92,15 +93,15 @@ export default function ItemsMaestro({ organizacionId }: { organizacionId: strin
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+      <div className="mod-toolbar">
         <input
-          style={{ ...campo, minWidth: 320 }}
+          className="ui-input ui-input--sm mod-auto" style={{ minWidth: 320 }}
           placeholder="Buscar por código, nombre, referencia o nombre del proveedor"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
         />
         <select
-          style={campo}
+          className="ui-input ui-input--sm mod-auto"
           value={estado}
           onChange={(e) => {
             setEstado(e.target.value as typeof estado);
@@ -112,11 +113,11 @@ export default function ItemsMaestro({ organizacionId }: { organizacionId: strin
           <option value="todos">Todos</option>
         </select>
         {permisos.itemsCrear && (
-          <button type="button" style={boton} onClick={() => setCreando((v) => !v)}>
+          <button type="button" className={creando ? 'ui-btn ui-btn--sm' : 'ui-btn ui-btn--sm ui-btn--primary'} onClick={() => setCreando((v) => !v)}>
             {creando ? 'Cancelar' : '+ Nuevo ítem'}
           </button>
         )}
-        <span style={{ fontSize: 13 }}>{cargando ? 'Cargando…' : `${total} ítem(s)`}</span>
+        <span className="mod-text">{cargando ? 'Cargando…' : `${total} ítem(s)`}</span>
       </div>
 
       {creando && (
@@ -130,13 +131,13 @@ export default function ItemsMaestro({ organizacionId }: { organizacionId: strin
         />
       )}
 
-      {error && <p style={{ color: '#b00020', fontSize: 13 }}>{error}</p>}
+      {error && <p className="mod-error mod-text">{error}</p>}
 
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <TablaExcel clave="itemsmaestro-1" etiqueta="Tabla de ítems"><table className="mod-table">
         <thead>
           <tr>
             {['Código', 'Nombre', 'Línea', 'Unidad', 'Proveedores', 'Referencias', 'Estado'].map((h) => (
-              <th key={h} style={{ ...celda, background: '#eee', fontWeight: 700 }}>
+              <th key={h}>
                 {h}
               </th>
             ))}
@@ -147,35 +148,35 @@ export default function ItemsMaestro({ organizacionId }: { organizacionId: strin
             <tr
               key={f.item_id}
               onClick={() => setAbierto(f.item_id)}
-              style={{ cursor: 'pointer', opacity: f.activo ? 1 : 0.55 }}
+              className={f.activo ? 'is-clickable' : 'is-clickable is-inactive'}
             >
-              <td style={celda}>{idVisible(f.item_id, f.provisional, f.codigo)}</td>
-              <td style={celda}>{f.nombre_base}</td>
-              <td style={celda}>{f.linea ?? ''}</td>
-              <td style={celda}>{f.unidad_medida ?? ''}</td>
-              <td style={celda}>{f.proveedores || ''}</td>
-              <td style={celda}>{f.referencias ?? ''}</td>
-              <td style={celda}>{f.activo ? 'Activo' : 'Inhabilitado'}</td>
+              <td>{idVisible(f.item_id, f.provisional, f.codigo)}</td>
+              <td>{f.nombre_base}</td>
+              <td>{f.linea ?? ''}</td>
+              <td>{f.unidad_medida ?? ''}</td>
+              <td>{f.proveedores || ''}</td>
+              <td>{f.referencias ?? ''}</td>
+              <td>{f.activo ? <span className="ui-badge ui-badge--success">Activo</span> : <span className="ui-badge">Inhabilitado</span>}</td>
             </tr>
           ))}
           {!cargando && filas.length === 0 && (
             <tr>
-              <td style={celda} colSpan={7}>
+              <td colSpan={7}>
                 No hay ítems con ese filtro.
               </td>
             </tr>
           )}
         </tbody>
-      </table>
+      </table></TablaExcel>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
-        <button type="button" style={boton} disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>
+      <div className="mod-pager">
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>
           Anterior
         </button>
-        <span style={{ fontSize: 13 }}>
+        <span className="mod-text">
           Página {pagina + 1} de {paginas}
         </span>
-        <button type="button" style={boton} disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>
           Siguiente
         </button>
       </div>
@@ -208,25 +209,25 @@ function FormNuevo({
   }
 
   return (
-    <div style={{ border: '1px solid #000', padding: 12, marginBottom: 12 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>Nuevo ítem</div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input style={{ ...campo, width: 130 }} placeholder="Código ERP *" value={v.codigo_erp}
+    <div className="mod-card mod-mb-3">
+      <div className="mod-semibold mod-mb-2">Nuevo ítem</div>
+      <div className="mod-flex mod-gap-2 mod-wrap">
+        <input className="ui-input ui-input--sm" style={{ width: 130 }} placeholder="Código ERP *" value={v.codigo_erp}
           onChange={(e) => setV({ ...v, codigo_erp: e.target.value })} />
-        <input style={{ ...campo, minWidth: 300 }} placeholder="Nombre *" value={v.nombre_base}
+        <input className="ui-input ui-input--sm mod-auto" style={{ minWidth: 300 }} placeholder="Nombre *" value={v.nombre_base}
           onChange={(e) => setV({ ...v, nombre_base: e.target.value })} />
-        <input style={{ ...campo, width: 120 }} placeholder="Unidad" value={v.unidad_medida}
+        <input className="ui-input ui-input--sm" style={{ width: 120 }} placeholder="Unidad" value={v.unidad_medida}
           onChange={(e) => setV({ ...v, unidad_medida: e.target.value })} />
-        <input style={{ ...campo, width: 160 }} placeholder="Línea" value={v.linea}
+        <input className="ui-input ui-input--sm" style={{ width: 160 }} placeholder="Línea" value={v.linea}
           onChange={(e) => setV({ ...v, linea: e.target.value })} />
-        <button type="button" style={boton} disabled={guardando} onClick={crear}>
+        <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={guardando} onClick={crear}>
           {guardando ? 'Guardando…' : 'Crear'}
         </button>
       </div>
-      <p style={{ fontSize: 12, margin: '8px 0 0' }}>
+      <p className="mod-sub mod-mt-2 mod-mb-0">
         El resto de los datos (IVA, logística, proveedores) se completan dentro del ítem.
       </p>
-      {error && <p style={{ color: '#b00020', fontSize: 13, margin: '6px 0 0' }}>{error}</p>}
+      {error && <p className="mod-error mod-text mod-mt-2 mod-mb-0">{error}</p>}
     </div>
   );
 }

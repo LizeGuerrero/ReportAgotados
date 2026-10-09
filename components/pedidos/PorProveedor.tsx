@@ -7,9 +7,9 @@ import SelectorLinea from '@/components/SelectorLinea';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import PorItem from '@/components/pedidos/PorItem';
 import {
-  boton, campo, celda, idVisible, PanelTexto, pesos, TABLAS_PEDIDOS, textoUltimaOrden,
-  type ProveedorLista,
+  idVisible, PanelTexto, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type ProveedorLista,
 } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface ItemProveedor {
   item_id: number;
@@ -187,7 +187,7 @@ export default function PorProveedor({
   if (creada) {
     return (
       <div>
-        <p style={{ fontSize: 14 }}>Solicitud creada. Copia el texto y envíalo al proveedor (WhatsApp, correo…).</p>
+        <p className="mod-md">Solicitud creada. Copia el texto y envíalo al proveedor (WhatsApp, correo…).</p>
         <PanelTexto
           titulo="Texto de la solicitud (sin costos)"
           texto={creada.texto}
@@ -196,7 +196,7 @@ export default function PorProveedor({
           }}
           onCerrar={() => {}}
         />
-        <button type="button" style={boton} onClick={terminar}>Terminar</button>
+        <button type="button" className="ui-btn ui-btn--sm" onClick={terminar}>Terminar</button>
       </div>
     );
   }
@@ -206,16 +206,16 @@ export default function PorProveedor({
   return (
     <div>
       {onTerminar && (
-        <button type="button" style={boton} onClick={onTerminar}>← Volver a solicitudes</button>
+        <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onTerminar}>← Volver a solicitudes</button>
       )}
-      <h2 style={{ fontSize: 17, margin: '12px 0' }}>Cotizar: por proveedor o por ítem</h2>
+      <h2 className="mod-h2 mod-mt-3 mod-mb-3">Cotizar: por proveedor o por ítem</h2>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div className="mod-flex mod-gap-2 mod-mb-2 mod-wrap mod-start">
         <Combobox
           opciones={proveedores.map((p) => ({
             valor: String(p.id),
             texto: p.nombre,
-            detalle: `NIT ${p.id} · ${p.items_pendientes} con agotado · ${p.items_total} ítems`,
+            detalle: `${p.documento} · ${p.items_pendientes} con agotado · ${p.items_total} ítems`,
           }))}
           valor={proveedor}
           onCambio={(v) => {
@@ -232,17 +232,17 @@ export default function PorProveedor({
           value={textoBusqueda}
           onChange={(e) => setTextoBusqueda(e.target.value)}
           placeholder="Buscar por ítem, nombre o referencia"
-          style={{ ...campo, minWidth: 280 }}
+          className="ui-input ui-input--sm mod-auto" style={{ minWidth: 280 }}
         />
       </div>
 
       {proveedor && (
-        <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
+        <div className="mod-flex mod-gap-4 mod-mb-3 mod-wrap mod-center mod-text">
           <label>
             <input type="checkbox" checked={catalogo} onChange={(e) => setCatalogo(e.target.checked)} />{' '}
             Buscar en todo el catálogo (ítems que este proveedor aún no tiene vinculados)
           </label>
-          <button type="button" style={boton} onClick={() => setItemNuevo((v) => !v)}>
+          <button type="button" className={itemNuevo ? 'ui-btn ui-btn--sm' : 'ui-btn ui-btn--sm ui-btn--primary'} onClick={() => setItemNuevo((v) => !v)}>
             {itemNuevo ? 'Cancelar ítem nuevo' : '+ Ítem nuevo (no está en el catálogo)'}
           </button>
         </div>
@@ -264,7 +264,7 @@ export default function PorProveedor({
         />
       )}
 
-      {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
 
       {/* Sin proveedor elegido se parte del ítem: se ven todos sus proveedores y se pide a varios a la vez */}
       {!proveedor && (
@@ -277,16 +277,15 @@ export default function PorProveedor({
         />
       )}
       {proveedor && catalogo && !busqueda.trim() && (
-        <p style={{ fontSize: 13 }}>Escribe un nombre, ítem o referencia para buscar en el catálogo completo.</p>
+        <p className="mod-text">Escribe un nombre, ítem o referencia para buscar en el catálogo completo.</p>
       )}
 
       {proveedor && (
         <>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <TablaExcel clave="porproveedor-1" etiqueta="Tabla de ítems del proveedor"><table className="mod-table">
               <thead>
                 <tr>
-                  <th style={{ ...celda, fontWeight: 600 }}>
+                  <th>
                     <input
                       type="checkbox"
                       aria-label="Marcar todos"
@@ -298,7 +297,7 @@ export default function PorProveedor({
                     'Item', 'Nombre Base', 'Línea', 'Referencia', 'Und/caja', 'Costo ERP', 'Días',
                     'Agotado en', 'Cant. sugerida', 'Última orden', 'Cant. a cotizar',
                   ].map((h) => (
-                    <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -307,8 +306,8 @@ export default function PorProveedor({
                   const e = efectivo(i);
                   const falta = e.on && !tieneAgotado(i) && !(Number(e.cant) > 0);
                   return (
-                    <tr key={i.item_id} style={{ opacity: i.ya_en_solicitud ? 0.5 : 1 }}>
-                      <td style={celda}>
+                    <tr key={i.item_id} className={i.ya_en_solicitud ? 'is-faded' : undefined}>
+                      <td>
                         <input
                           type="checkbox"
                           disabled={i.ya_en_solicitud}
@@ -317,40 +316,40 @@ export default function PorProveedor({
                           aria-label={`Incluir ítem ${i.item_id}`}
                         />
                       </td>
-                      <td style={celda}>{idVisible(i.item_id, i.provisional, i.codigo)}</td>
-                      <td style={celda}>
+                      <td>{idVisible(i.item_id, i.provisional, i.codigo)}</td>
+                      <td>
                         {i.nombre_base}
-                        {i.provisional && <div style={{ fontSize: 11 }}>Ítem provisional (aún sin ID del ERP)</div>}
-                        {!i.vinculado && <div style={{ fontSize: 11 }}>Se vinculará a este proveedor al crear la solicitud</div>}
-                        {i.ya_en_solicitud && <div style={{ fontSize: 11 }}>Ya está en una solicitud abierta con este proveedor</div>}
+                        {i.provisional && <div className="mod-sub">Ítem provisional (aún sin ID del ERP)</div>}
+                        {!i.vinculado && <div className="mod-sub">Se vinculará a este proveedor al crear la solicitud</div>}
+                        {i.ya_en_solicitud && <div className="mod-sub">Ya está en una solicitud abierta con este proveedor</div>}
                       </td>
-                      <td style={celda}>{i.linea ?? ''}</td>
-                      <td style={celda}>{i.referencia ?? ''}</td>
-                      <td style={celda}>{i.unidades_por_caja ?? ''}</td>
-                      <td style={celda}>{pesos(i.precio_erp)}</td>
-                      <td style={celda}>{i.dias_entrega ?? ''}</td>
-                      <td style={celda}>{i.agotado_sedes?.join(', ') ?? ''}</td>
-                      <td style={celda}>{i.cantidad_sugerida ?? ''}</td>
-                      <td style={celda}>
+                      <td>{i.linea ?? ''}</td>
+                      <td>{i.referencia ?? ''}</td>
+                      <td>{i.unidades_por_caja ?? ''}</td>
+                      <td>{pesos(i.precio_erp)}</td>
+                      <td>{i.dias_entrega ?? ''}</td>
+                      <td>{i.agotado_sedes?.join(', ') ?? ''}</td>
+                      <td>{i.cantidad_sugerida ?? ''}</td>
+                      <td>
                         {textoUltimaOrden(i.ultima_orden_numero, i.ultima_orden_fecha, i.ultima_orden_cantidad)}
                       </td>
-                      <td style={celda}>
+                      <td>
                         <input
                           value={e.cant}
                           inputMode="numeric"
                           disabled={i.ya_en_solicitud}
                           onChange={(ev) => poner(i, { cant: ev.target.value.replace(/\D/g, '') })}
-                          style={{ width: 70, border: falta ? '2px solid #000' : '1px solid #000', padding: 2 }}
+                          className={falta ? 'ui-input ui-input--sm mod-cell-input is-missing' : 'ui-input ui-input--sm mod-cell-input'} style={{ width: 70 }}
                           aria-label={`Cantidad a cotizar ítem ${i.item_id}`}
                         />
-                        {falta && <div style={{ fontSize: 11 }}>Obligatoria</div>}
+                        {falta && <div className="mod-sub">Obligatoria</div>}
                       </td>
                     </tr>
                   );
                 })}
                 {items.length === 0 && !(catalogo && !busqueda.trim()) && (
                   <tr>
-                    <td style={celda} colSpan={12}>
+                    <td colSpan={12}>
                       {catalogo
                         ? 'El catálogo no tiene ítems con esa búsqueda'
                         : `${proveedorActual?.nombre ?? 'Este proveedor'} no tiene ítems vinculados con esos filtros. Activa “Buscar en todo el catálogo” para agregar uno.`}
@@ -358,24 +357,23 @@ export default function PorProveedor({
                   </tr>
                 )}
               </tbody>
-            </table>
-          </div>
+            </table></TablaExcel>
 
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="mod-mt-3 mod-flex mod-gap-2 mod-center mod-wrap">
             <button
               type="button"
-              style={{ ...boton, fontWeight: 600 }}
+              className="ui-btn ui-btn--sm mod-semibold"
               disabled={marcados.length === 0 || guardando || sinCantidad.length > 0}
               onClick={crear}
             >
               Crear solicitud ({marcados.length} ítems)
             </button>
             {sinCantidad.length > 0 && (
-              <span style={{ fontSize: 12 }}>
+              <span className="mod-sub">
                 Falta la cantidad en {sinCantidad.length} ítem(s) sin agotado reportado.
               </span>
             )}
-            <span style={{ fontSize: 12 }}>
+            <span className="mod-sub">
               Un mismo ítem puede ir en solicitudes a varios proveedores. Los costos se registran después en el detalle del ítem.
             </span>
           </div>
@@ -432,21 +430,21 @@ function NuevoItemProvisional({
   }
 
   return (
-    <div style={{ border: '1px solid #000', padding: 12, marginBottom: 12 }}>
-      <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 14 }}>Ítem nuevo</div>
-      <p style={{ fontSize: 12, margin: '0 0 8px' }}>
+    <div className="mod-card mod-mb-3">
+      <div className="mod-semibold mod-mb-1 mod-md">Ítem nuevo</div>
+      <p className="mod-sub mod-mt-0 mod-mb-2">
         Antes de crearlo, busca en el catálogo completo: puede que ya exista con otro nombre.
         El IVA es obligatorio porque se usa para calcular el costo con IVA.
       </p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="mod-flex mod-gap-2 mod-wrap mod-center">
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Nombre del ítem"
-          style={{ ...campo, width: 300 }}
+          className="ui-input ui-input--sm" style={{ width: 300 }}
           aria-label="Nombre del ítem nuevo"
         />
-        <select value={iva} onChange={(e) => setIva(e.target.value)} style={campo} aria-label="IVA">
+        <select value={iva} onChange={(e) => setIva(e.target.value)} className="ui-input ui-input--sm mod-auto" aria-label="IVA">
           {IVAS.map((o) => (
             <option key={o.valor} value={o.valor}>IVA {o.texto}</option>
           ))}
@@ -456,7 +454,7 @@ function NuevoItemProvisional({
           onChange={(e) => setLinea(e.target.value)}
           list="lineas-item-nuevo"
           placeholder="Línea (opcional)"
-          style={{ ...campo, width: 180 }}
+          className="ui-input ui-input--sm" style={{ width: 180 }}
           aria-label="Línea"
         />
         <datalist id="lineas-item-nuevo">
@@ -468,19 +466,19 @@ function NuevoItemProvisional({
           value={unidad}
           onChange={(e) => setUnidad(e.target.value)}
           placeholder="Unidad (opcional)"
-          style={{ ...campo, width: 130 }}
+          className="ui-input ui-input--sm" style={{ width: 130 }}
           aria-label="Unidad de medida"
         />
         <button
           type="button"
-          style={{ ...boton, fontWeight: 600 }}
+          className="ui-btn ui-btn--sm mod-semibold"
           disabled={guardando || nombre.trim() === ''}
           onClick={guardar}
         >
           Crear ítem
         </button>
       </div>
-      {error && <p style={{ fontSize: 13, margin: '8px 0 0' }}>Error: {error}</p>}
+      {error && <p className="mod-text mod-mt-2 mod-mb-0">Error: {error}</p>}
     </div>
   );
 }

@@ -5,9 +5,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import {
-  boton, campo, celda, ESTADOS, fecha, idVisible, pesos, RESPUESTAS, TABLAS_PEDIDOS, textoCajas,
-  textoUltimaOrden, type Pedido, type SedePedido,
+  fecha, idVisible, InsigniaEstado, pesos, RESPUESTAS, TABLAS_PEDIDOS, textoCajas, textoUltimaOrden, type Pedido, type SedePedido,
 } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface Cotizacion {
   cotizacion_id: string;
@@ -122,14 +122,14 @@ export default function DetalleCotizacion({
 
   return (
     <div>
-      <button type="button" style={boton} onClick={onVolver}>← Volver a pedidos</button>
-      <h2 style={{ fontSize: 17, margin: '12px 0 4px' }}>
+      <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onVolver}>← Volver a pedidos</button>
+      <h2 className="mod-h2 mod-mt-3 mod-mb-1">
         Item {idVisible(pedido.item_id, pedido.provisional, pedido.codigo)} — {pedido.nombre_base}
       </h2>
-      <div style={{ fontSize: 13, marginBottom: 12 }}>
-        Línea: {pedido.linea ?? '-'} · IVA: {Math.round((pedido.iva ?? 0) * 100)}% ·{' '}
+      <div className="mod-text mod-mb-3">
+        Línea: {pedido.linea ?? '-'} · IVA de venta: {Math.round((pedido.iva ?? 0) * 100)}% ·{' '}
         Cantidad sugerida total: {pedido.cantidad_sugerida ?? '-'} {pedido.unidad_medida ?? ''} ·{' '}
-        Estado: {ESTADOS[pedido.estado] ?? pedido.estado}
+        Estado: <InsigniaEstado estado={pedido.estado} />
         {pedido.origen === 'manual' && (
           <> · Iniciado por Compras (sin agotado){pedido.provisional ? ' · ítem provisional (sin ID del ERP)' : ''}</>
         )}
@@ -138,14 +138,14 @@ export default function DetalleCotizacion({
         )}
       </div>
 
-      {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
 
       {pedido.estado === 'agotado_proveedor' && (
-        <p style={{ fontSize: 13 }}>
+        <p className="mod-text">
           Todos los proveedores consultados respondieron sin disponibilidad.{' '}
           <button
             type="button"
-            style={boton}
+            className="ui-btn ui-btn--sm"
             onClick={async () => {
               const { error } = await supabase.rpc('pedido_reabrir', { p_org: organizacionId, p_item: pedido.item_id });
               if (error) setError(error.message);
@@ -158,34 +158,33 @@ export default function DetalleCotizacion({
       )}
 
       {pedido.sedes.length === 0 ? (
-        <p style={{ fontSize: 13 }}>
+        <p className="mod-text">
           Ninguna sede reportó este ítem como agotado: la gestión la inició Compras.
         </p>
       ) : (
         <>
-        <h3 style={{ fontSize: 14, margin: '12px 0 4px' }}>Cantidad sugerida por sede</h3>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ borderCollapse: 'collapse' }}>
+        <h3 className="mod-h3 mod-mt-3 mod-mb-1">Cantidad sugerida por sede</h3>
+        <TablaExcel clave="detallecotizacion-1" etiqueta="Tabla de cotización"><table className="mod-table mod-table--auto">
             <thead>
               <tr>
                 {['Sede', 'Usuario', 'Cant. sugerida', 'Nota', 'Fecha solicitud', 'Respuesta Compras (manual)'].map((h) => (
-                  <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {pedido.sedes.map((s) => (
                 <tr key={s.sede_id}>
-                  <td style={celda}>{s.sede}</td>
-                  <td style={celda}>{s.usuario ?? ''}</td>
-                  <td style={celda}>{s.cantidad_sugerida ?? ''}</td>
-                  <td style={{ ...celda, whiteSpace: 'pre-wrap', maxWidth: 260 }}>{s.notas ?? ''}</td>
-                  <td style={celda}>{fecha(s.fecha)}</td>
-                  <td style={celda}>
+                  <td>{s.sede}</td>
+                  <td>{s.usuario ?? ''}</td>
+                  <td>{s.cantidad_sugerida ?? ''}</td>
+                  <td className="mod-prewrap" style={{ maxWidth: 260 }}>{s.notas ?? ''}</td>
+                  <td>{fecha(s.fecha)}</td>
+                  <td>
                     <select
                       value={s.respuesta_compras ?? ''}
                       aria-label={`Respuesta para ${s.sede}`}
-                      style={{ ...campo, padding: 3, fontSize: 13 }}
+                      className="ui-input ui-input--sm mod-auto"
                       onChange={(e) => responder(s, e.target.value)}
                     >
                       <option value="" disabled>Sin respuesta</option>
@@ -194,20 +193,18 @@ export default function DetalleCotizacion({
                       ))}
                     </select>
                     {s.respuesta_compras === 'no_se_pide' && s.motivo_compras && (
-                      <div style={{ fontSize: 11, maxWidth: 220 }}>Motivo: {s.motivo_compras}</div>
+                      <div className="mod-sub" style={{ maxWidth: 220 }}>Motivo: {s.motivo_compras}</div>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </table></TablaExcel>
         </>
       )}
 
-      <h3 style={{ fontSize: 14, margin: '16px 0 4px' }}>Cotizaciones por proveedor</h3>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <h3 className="mod-h3 mod-mt-4 mod-mb-1">Cotizaciones por proveedor</h3>
+      <TablaExcel clave="detallecotizacion-2" etiqueta="Tabla de cotización"><table className="mod-table">
           <thead>
             <tr>
               {[
@@ -215,7 +212,7 @@ export default function DetalleCotizacion({
                 'Costo con IVA', 'Disponible', 'Días entrega', 'Flete ($)', 'Und/caja', 'Observación',
                 '', 'Ganador',
               ].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -232,15 +229,14 @@ export default function DetalleCotizacion({
             ))}
             {!cargando && activas.length === 0 && (
               <tr>
-                <td style={celda} colSpan={14}>
+                <td colSpan={14}>
                   Aún no hay cotizaciones. Crea una solicitud por proveedor (pestaña Por proveedor) o agrega un proveedor aquí abajo.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
-      <p style={{ fontSize: 12, margin: '4px 0 0' }}>
+        </table></TablaExcel>
+      <p className="mod-sub mod-mt-1 mod-mb-0">
         Flete vacío = no paga flete. La cantidad a pedir se define al elegir el ganador. Los ítems ganadores se agrupan en la pestaña “Órdenes de compra”.
       </p>
 
@@ -248,41 +244,39 @@ export default function DetalleCotizacion({
         <AgregarProveedor pedido={pedido} activas={activas} accion={accion} />
       )}
 
-      <label style={{ display: 'block', margin: '16px 0 4px', fontSize: 13 }}>
+      <label className="mod-block mod-mt-4 mod-mb-1 mod-text">
         <input type="checkbox" checked={historial} onChange={(e) => setHistorial(e.target.checked)} />{' '}
         Ver historial de cotizaciones anteriores
       </label>
       {historial && (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ borderCollapse: 'collapse' }}>
+        <TablaExcel clave="detallecotizacion-3" etiqueta="Tabla de cotización"><table className="mod-table mod-table--auto">
             <thead>
               <tr>
                 {['Solicitud', 'Proveedor', 'Fecha', 'Costo unitario', 'Costo con IVA', 'Disponible', 'Días', 'Flete', 'Observación', 'Fue ganador'].map((h) => (
-                  <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {antiguas.map((c) => (
                 <tr key={c.cotizacion_id}>
-                  <td style={celda}>{c.solicitud_numero}</td>
-                  <td style={celda}>{c.proveedor}</td>
-                  <td style={celda}>{fecha(c.fecha_respuesta ?? c.fecha_solicitud)}</td>
-                  <td style={celda}>{pesos(c.costo_unitario)}</td>
-                  <td style={celda}>{pesos(c.costo_con_iva)}</td>
-                  <td style={celda}>{c.disponible === null ? '' : c.disponible ? 'Sí' : 'No'}</td>
-                  <td style={celda}>{c.dias_entrega ?? ''}</td>
-                  <td style={celda}>{pesos(c.flete)}</td>
-                  <td style={celda}>{c.observacion ?? ''}</td>
-                  <td style={celda}>{c.seleccionado ? 'Sí' : ''}</td>
+                  <td>{c.solicitud_numero}</td>
+                  <td>{c.proveedor}</td>
+                  <td>{fecha(c.fecha_respuesta ?? c.fecha_solicitud)}</td>
+                  <td>{pesos(c.costo_unitario)}</td>
+                  <td>{pesos(c.costo_con_iva)}</td>
+                  <td>{c.disponible === null ? '' : <span className={c.disponible ? 'ui-badge ui-badge--success' : 'ui-badge ui-badge--danger'}>{c.disponible ? 'Sí' : 'No'}</span>}</td>
+                  <td>{c.dias_entrega ?? ''}</td>
+                  <td>{pesos(c.flete)}</td>
+                  <td>{c.observacion ?? ''}</td>
+                  <td>{c.seleccionado ? 'Sí' : ''}</td>
                 </tr>
               ))}
               {antiguas.length === 0 && (
-                <tr><td style={celda} colSpan={10}>Sin historial</td></tr>
+                <tr><td colSpan={10}>Sin historial</td></tr>
               )}
             </tbody>
-          </table>
-        </div>
+          </table></TablaExcel>
       )}
     </div>
   );
@@ -304,14 +298,22 @@ function FilaCotizacion({
   const [porCaja, setPorCaja] = useState(c.unidades_por_caja?.toString() ?? '');
   const [obs, setObs] = useState(c.observacion ?? '');
   const [cantPedir, setCantPedir] = useState(c.cantidad_pedir?.toString() ?? '');
+  // IVA de COMPRA (del proveedor); se puede ajustar si el proveedor informa otra tarifa
+  const [ivaPct, setIvaPct] = useState(String(Math.round(c.iva * 10000) / 100));
+  const ivaNum = ivaPct.trim() === '' ? NaN : Number(ivaPct.replace(',', '.')) / 100;
+  const ivaValido = Number.isFinite(ivaNum) && ivaNum >= 0 && ivaNum <= 1;
 
-  const conIva = costo === '' ? null : Math.round(Number(costo) * (1 + c.iva) * 100) / 100;
+  const conIva = costo === '' || !ivaValido ? null : Math.round(Number(costo) * (1 + ivaNum) * 100) / 100;
   const puedeElegir = c.disponible === true && c.costo_unitario !== null;
   const esMejor = mejor !== null && c.disponible === true && c.costo_con_iva === mejor;
 
   function guardar() {
     if (disp === '') {
       avisar('Indica si el proveedor tiene disponibilidad');
+      return;
+    }
+    if (!ivaValido) {
+      avisar('Escribe el IVA como porcentaje entre 0 y 100');
       return;
     }
     accion('cotizacion_guardar', {
@@ -322,6 +324,7 @@ function FilaCotizacion({
       p_flete: num(flete),
       p_observacion: obs.trim() || null,
       p_unidades_por_caja: num(porCaja),
+      p_iva: ivaNum,
     });
   }
 
@@ -331,38 +334,46 @@ function FilaCotizacion({
     accion('cotizacion_elegir', { p_cotizacion: c.cotizacion_id, p_cantidad_pedir: n });
   }
 
-  const entrada = { border: '1px solid #000', padding: 2, color: '#000', background: '#fff' } as const;
-
   return (
-    <tr style={{ background: c.seleccionado ? '#e8e8e8' : '#fff' }}>
-      <td style={celda}>
+    <tr className={c.seleccionado ? 'is-selected' : undefined}>
+      <td>
         {c.proveedor}
-        <div style={{ fontSize: 11 }}>{c.solicitud_numero}</div>
+        <div className="mod-sub">{c.solicitud_numero}</div>
       </td>
-      <td style={celda}>{c.referencia ?? ''}</td>
-      <td style={celda}>{c.cantidad_a_cotizar ?? ''}</td>
-      <td style={celda}>{pesos(c.precio_erp)}</td>
-      <td style={celda}>
+      <td>{c.referencia ?? ''}</td>
+      <td>{c.cantidad_a_cotizar ?? ''}</td>
+      <td>{pesos(c.precio_erp)}</td>
+      <td>
         <input
           value={costo}
           inputMode="decimal"
           disabled={!editable}
           onChange={(e) => setCosto(soloNumero(e.target.value))}
-          style={{ ...entrada, width: 90 }}
+          className="ui-input ui-input--sm mod-cell-input" style={{ width: 90 }}
           aria-label={`Costo unitario ${c.proveedor}`}
         />
       </td>
-      <td style={celda}>{Math.round(c.iva * 100)}%</td>
-      <td style={{ ...celda, fontWeight: esMejor ? 700 : 400 }}>
-        {conIva !== null ? pesos(conIva) : ''}
-        {esMejor && <div style={{ fontSize: 11 }}>★ mejor costo</div>}
+      <td>
+        <input
+          value={ivaPct}
+          inputMode="decimal"
+          disabled={!editable}
+          onChange={(e) => setIvaPct(soloNumero(e.target.value))}
+          className="ui-input ui-input--sm mod-cell-input" style={{ width: 52 }}
+          aria-label={`IVA de compra ${c.proveedor}`}
+        />
+        %
       </td>
-      <td style={celda}>
+      <td className={esMejor ? 'is-strong' : undefined}>
+        {conIva !== null ? pesos(conIva) : ''}
+        {esMejor && <div className="mod-sub mod-star">★ mejor costo</div>}
+      </td>
+      <td>
         <select
           value={disp}
           disabled={!editable}
           onChange={(e) => setDisp(e.target.value as '' | 'si' | 'no')}
-          style={{ ...entrada, padding: 3 }}
+          className="ui-input ui-input--sm mod-cell-input"
           aria-label={`Disponible ${c.proveedor}`}
         >
           <option value="" disabled>—</option>
@@ -370,33 +381,33 @@ function FilaCotizacion({
           <option value="no">No</option>
         </select>
       </td>
-      <td style={celda}>
+      <td>
         <input value={dias} inputMode="numeric" disabled={!editable}
           onChange={(e) => setDias(e.target.value.replace(/\D/g, ''))}
-          style={{ ...entrada, width: 50 }} aria-label={`Días de entrega ${c.proveedor}`} />
+          className="ui-input ui-input--sm mod-cell-input" style={{ width: 50 }} aria-label={`Días de entrega ${c.proveedor}`} />
       </td>
-      <td style={celda}>
+      <td>
         <input value={flete} inputMode="decimal" disabled={!editable}
           onChange={(e) => setFlete(soloNumero(e.target.value))}
-          style={{ ...entrada, width: 80 }} aria-label={`Flete ${c.proveedor}`} />
+          className="ui-input ui-input--sm mod-cell-input" style={{ width: 80 }} aria-label={`Flete ${c.proveedor}`} />
       </td>
-      <td style={celda}>
+      <td>
         <input value={porCaja} inputMode="numeric" disabled={!editable}
           onChange={(e) => setPorCaja(e.target.value.replace(/\D/g, ''))}
-          style={{ ...entrada, width: 60 }} aria-label={`Unidades por caja ${c.proveedor}`} />
+          className="ui-input ui-input--sm mod-cell-input" style={{ width: 60 }} aria-label={`Unidades por caja ${c.proveedor}`} />
       </td>
-      <td style={celda}>
+      <td>
         <textarea value={obs} rows={2} disabled={!editable}
           onChange={(e) => setObs(e.target.value)}
-          style={{ ...entrada, width: 160 }} aria-label={`Observación ${c.proveedor}`} />
+          className="ui-input ui-input--sm mod-cell-input" style={{ width: 160 }} aria-label={`Observación ${c.proveedor}`} />
         {c.fecha_respuesta && (
-          <div style={{ fontSize: 11 }}>Resp.: {fecha(c.fecha_respuesta)}{c.respondio ? ` · ${c.respondio}` : ''}</div>
+          <div className="mod-sub">Resp.: {fecha(c.fecha_respuesta)}{c.respondio ? ` · ${c.respondio}` : ''}</div>
         )}
       </td>
-      <td style={celda}>
-        {editable && <button type="button" style={boton} onClick={guardar}>Guardar</button>}
+      <td>
+        {editable && <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={guardar}>Guardar</button>}
       </td>
-      <td style={celda}>
+      <td>
         <label>
           <input
             type="radio"
@@ -407,20 +418,20 @@ function FilaCotizacion({
           />{' '}
           Elegir
         </label>
-        {!puedeElegir && <div style={{ fontSize: 11 }}>Guarda costo y disponibilidad</div>}
+        {!puedeElegir && <div className="mod-sub">Guarda costo y disponibilidad</div>}
         {c.seleccionado && (
-          <div style={{ marginTop: 4 }}>
+          <div className="mod-mt-1">
             Cant. a pedir:{' '}
             <input
               value={cantPedir}
               inputMode="numeric"
               onChange={(e) => setCantPedir(e.target.value.replace(/\D/g, ''))}
               onBlur={guardarCantidadPedir}
-              style={{ ...entrada, width: 70 }}
+              className="ui-input ui-input--sm mod-cell-input" style={{ width: 70 }}
               aria-label="Cantidad a pedir"
             />
-            <div style={{ fontSize: 11 }}>{textoCajas(Number(cantPedir), c.unidades_por_caja)}</div>
-            <button type="button" style={{ ...boton, marginTop: 4 }}
+            <div className="mod-sub">{textoCajas(Number(cantPedir), c.unidades_por_caja)}</div>
+            <button type="button" className="ui-btn ui-btn--sm mod-mt-1"
               onClick={() => accion('cotizacion_elegir', { p_cotizacion: c.cotizacion_id, p_elegir: false })}>
               Quitar elección
             </button>
@@ -438,7 +449,9 @@ function AgregarProveedor({
   activas: Cotizacion[];
   accion: Accion;
 }) {
-  const [nit, setNit] = useState('');
+  const [provId, setProvId] = useState<number | null>(null);
+  const [tipo, setTipo] = useState('NIT');
+  const [documento, setDocumento] = useState('');
   const [nombre, setNombre] = useState('');
   const [referencia, setReferencia] = useState('');
   const [porCaja, setPorCaja] = useState('');
@@ -450,7 +463,10 @@ function AgregarProveedor({
   function elegirExistente(id: string) {
     const p = pedido.proveedores.find((x) => String(x.proveedor_id) === id);
     if (!p) return;
-    setNit(String(p.proveedor_id));
+    const [t, ...resto] = (p.documento ?? '').split(' ');
+    setProvId(p.proveedor_id);
+    setTipo(t || 'NIT');
+    setDocumento(resto.join(' '));
     setNombre(p.proveedor);
     setReferencia(p.codigo ?? '');
     setPorCaja(p.unidades_por_caja?.toString() ?? '');
@@ -459,45 +475,50 @@ function AgregarProveedor({
   async function agregar() {
     const ok = await accion('cotizacion_agregar_proveedor', {
       p_item: pedido.item_id,
-      p_nit: Number(nit),
+      p_proveedor: provId,
+      p_tipo_documento: tipo,
+      p_documento: provId ? null : documento.trim() || null,
       p_nombre: nombre.trim() || null,
       p_referencia: referencia.trim() || null,
       p_unidades_por_caja: porCaja === '' ? null : Number(porCaja),
     });
     if (ok) {
-      setNit(''); setNombre(''); setReferencia(''); setPorCaja('');
+      setProvId(null); setDocumento(''); setNombre(''); setReferencia(''); setPorCaja('');
     }
   }
 
   return (
-    <div style={{ border: '1px solid #000', padding: 12, marginTop: 16 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>Agregar proveedor a esta cotización</div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+    <div className="mod-card mod-mt-4">
+      <div className="mod-semibold mod-mb-2 mod-md">Agregar proveedor a esta cotización</div>
+      <div className="mod-flex mod-gap-2 mod-wrap mod-center">
         <Combobox
           opciones={disponibles.map((p) => ({
             valor: String(p.proveedor_id),
             texto: p.proveedor,
-            detalle: [`NIT ${p.proveedor_id}`, p.codigo ? `ref ${p.codigo}` : ''].filter(Boolean).join(' · '),
+            detalle: [p.documento, p.codigo ? `ref ${p.codigo}` : ''].filter(Boolean).join(' · '),
           }))}
-          valor={disponibles.some((p) => String(p.proveedor_id) === nit) ? nit : ''}
+          valor={provId !== null && disponibles.some((p) => p.proveedor_id === provId) ? String(provId) : ''}
           onCambio={elegirExistente}
           etiqueta="Proveedor del ítem"
           placeholder="Proveedor ya vinculado al ítem…"
           ancho={280}
         />
-        <span style={{ fontSize: 13 }}>o uno nuevo:</span>
-        <input value={nit} inputMode="numeric" placeholder="NIT (sin guiones ni DV)"
-          onChange={(e) => setNit(e.target.value.replace(/\D/g, ''))} style={{ ...campo, width: 170 }} />
+        <span className="mod-text">o uno nuevo:</span>
+        <select value={tipo} onChange={(e) => { setTipo(e.target.value); setProvId(null); }} className="ui-input ui-input--sm mod-auto" aria-label="Tipo de documento">
+          {['NIT', 'CC', 'CE', 'PAS', 'OTRO'].map((x) => <option key={x} value={x}>{x}</option>)}
+        </select>
+        <input value={documento} placeholder="Documento (sin guiones ni DV)"
+          onChange={(e) => { setDocumento(e.target.value.replace(/[^A-Za-z0-9]/g, '')); setProvId(null); }} className="ui-input ui-input--sm" style={{ width: 190 }} />
         <input value={nombre} placeholder="Nombre del proveedor"
-          onChange={(e) => setNombre(e.target.value)} style={{ ...campo, width: 220 }} />
+          onChange={(e) => setNombre(e.target.value)} className="ui-input ui-input--sm" style={{ width: 220 }} />
         <input value={referencia} placeholder="Referencia (opcional)"
-          onChange={(e) => setReferencia(e.target.value)} style={{ ...campo, width: 170 }} />
+          onChange={(e) => setReferencia(e.target.value)} className="ui-input ui-input--sm" style={{ width: 170 }} />
         <input value={porCaja} inputMode="numeric" placeholder="Und/caja (opcional)"
-          onChange={(e) => setPorCaja(e.target.value.replace(/\D/g, ''))} style={{ ...campo, width: 140 }} />
-        <button type="button" style={boton} disabled={!nit} onClick={agregar}>Agregar</button>
+          onChange={(e) => setPorCaja(e.target.value.replace(/\D/g, ''))} className="ui-input ui-input--sm" style={{ width: 140 }} />
+        <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={!provId && !documento} onClick={agregar}>Agregar</button>
       </div>
-      <p style={{ fontSize: 12, margin: '6px 0 0' }}>
-        Si el NIT no existe se crea el proveedor (el nombre es obligatorio) y queda vinculado al ítem.
+      <p className="mod-sub mod-mt-2 mod-mb-0">
+        Si el documento no existe se crea el proveedor (el nombre es obligatorio) y queda vinculado al ítem.
       </p>
     </div>
   );

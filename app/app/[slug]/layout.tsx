@@ -22,6 +22,10 @@ export default async function OrganizacionLayout({
   // El botón de Pedidos solo existe para quien tiene permiso de ver ese módulo.
   if (ctx.permisos.pedidos) modulos.push({ clave: 'pedidos', texto: 'Pedidos', href: `${base}/pedidos` });
   if (ctx.permisos.items) modulos.push({ clave: 'items', texto: 'Ítems', href: `${base}/items` });
+  if (ctx.permisos.proveedores) modulos.push({ clave: 'proveedores', texto: 'Proveedores', href: `${base}/proveedores` });
+  // Cuentas por pagar: entra por la cartera, o por Pagados si solo tiene ese permiso.
+  if (ctx.permisos.cxp) modulos.push({ clave: 'cxp', texto: 'Cuentas por pagar', href: `${base}/cxp` });
+  else if (ctx.permisos.cxpPagos) modulos.push({ clave: 'cxp', texto: 'Cuentas por pagar', href: `${base}/cxp-pagados` });
   // Panel de la organización: solo administradores.
   if (ctx.esAdmin) modulos.push({ clave: 'admin', texto: 'Administración', href: `${base}/admin` });
 

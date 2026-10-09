@@ -5,15 +5,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import {
-  boton, celda, idVisible, PanelTexto, pesos, TABLAS_PEDIDOS, textoUltimaOrden,
-  type ProveedorLista,
+  idVisible, PanelTexto, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type ProveedorLista,
 } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 const POR_PAGINA = 50;
 
 interface ProveedorDeItem {
   proveedor_id: number;
   proveedor: string;
+  documento: string;
   codigo: string | null;
   precio_erp: number | null;
   dias: number | null;
@@ -211,13 +212,13 @@ export default function PorItem({
   if (resultado) {
     return (
       <div>
-        <p style={{ fontSize: 14 }}>
+        <p className="mod-md">
           {resultado.solicitudes.length === 0
             ? 'No se creó ninguna solicitud.'
             : `Se crearon ${resultado.solicitudes.length} solicitud(es), una por proveedor. Copia cada texto y envíalo.`}
         </p>
         {resultado.omitidos > 0 && (
-          <p style={{ fontSize: 13 }}>
+          <p className="mod-text">
             {resultado.omitidos} combinación(es) ítem-proveedor se omitieron porque ya estaban en una solicitud abierta.
           </p>
         )}
@@ -232,10 +233,10 @@ export default function PorItem({
             onCerrar={() => {}}
           />
         ))}
-        <p style={{ fontSize: 13 }}>
+        <p className="mod-text">
           Cuando los proveedores respondan, registra los precios y compáralos en la pestaña “Comparativo”.
         </p>
-        <button type="button" style={boton} onClick={() => setResultado(null)}>Terminar</button>
+        <button type="button" className="ui-btn ui-btn--sm" onClick={() => setResultado(null)}>Terminar</button>
       </div>
     );
   }
@@ -244,22 +245,21 @@ export default function PorItem({
 
   return (
     <div>
-      <p style={{ fontSize: 13, margin: '0 0 8px' }}>
+      <p className="mod-text mod-mt-0 mod-mb-2">
         {hayFiltro
           ? 'Ítems que coinciden con el filtro; los que tienen agotado reportado salen primero.'
           : 'Elige una línea o escribe una búsqueda para ver ítems. Mientras tanto, estos son los ítems con agotado reportado.'}{' '}
         Marca los ítems y los proveedores a los que les vas a pedir cotización.
       </p>
 
-      {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <TablaExcel clave="poritem-1" etiqueta="Tabla de ítems por cotizar"><table className="mod-table">
           <thead>
             <tr>
-              <th style={{ ...celda, fontWeight: 600 }}> </th>
+              <th> </th>
               {['Item', 'Nombre Base', 'Línea', 'Agotado en', 'Cant. sugerida', 'Última orden', 'Cant. a cotizar', 'Proveedores a consultar'].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -271,10 +271,10 @@ export default function PorItem({
               const extras = s.extra.filter((id) => !i.proveedores.some((p) => p.proveedor_id === id));
               const candidatos = proveedores
                 .filter((p) => !i.proveedores.some((x) => x.proveedor_id === p.id) && !s.extra.includes(p.id))
-                .map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: `NIT ${p.id}` }));
+                .map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: p.documento }));
               return (
-                <tr key={i.item_id} style={{ verticalAlign: 'top' }}>
-                  <td style={celda}>
+                <tr key={i.item_id} >
+                  <td>
                     <input
                       type="checkbox"
                       checked={s.on}
@@ -282,34 +282,34 @@ export default function PorItem({
                       aria-label={`Incluir ítem ${i.item_id}`}
                     />
                   </td>
-                  <td style={celda}>{idVisible(i.item_id, i.provisional, i.codigo)}</td>
-                  <td style={celda}>
+                  <td>{idVisible(i.item_id, i.provisional, i.codigo)}</td>
+                  <td>
                     {i.nombre_base}
-                    {i.provisional && <div style={{ fontSize: 11 }}>Ítem provisional (aún sin ID del ERP)</div>}
-                    {i.en_gestion && <div style={{ fontSize: 11 }}>Ya está en cotización con algún proveedor</div>}
+                    {i.provisional && <div className="mod-sub">Ítem provisional (aún sin ID del ERP)</div>}
+                    {i.en_gestion && <div className="mod-sub">Ya está en cotización con algún proveedor</div>}
                   </td>
-                  <td style={celda}>{i.linea ?? ''}</td>
-                  <td style={celda}>{i.agotado_sedes?.join(', ') ?? ''}</td>
-                  <td style={celda}>{i.cantidad_sugerida ?? ''}</td>
-                  <td style={celda}>
+                  <td>{i.linea ?? ''}</td>
+                  <td>{i.agotado_sedes?.join(', ') ?? ''}</td>
+                  <td>{i.cantidad_sugerida ?? ''}</td>
+                  <td>
                     {textoUltimaOrden(i.ultima_orden_numero, i.ultima_orden_fecha, i.ultima_orden_cantidad)}
                   </td>
-                  <td style={celda}>
+                  <td>
                     <input
                       value={s.cant}
                       inputMode="numeric"
                       onChange={(e) => cambiar(i, { cant: e.target.value.replace(/\D/g, '') })}
-                      style={{ width: 70, border: falta ? '2px solid #000' : '1px solid #000', padding: 2 }}
+                      className={falta ? 'ui-input ui-input--sm mod-cell-input is-missing' : 'ui-input ui-input--sm mod-cell-input'} style={{ width: 70 }}
                       aria-label={`Cantidad a cotizar ítem ${i.item_id}`}
                     />
-                    {falta && <div style={{ fontSize: 11 }}>Obligatoria</div>}
+                    {falta && <div className="mod-sub">Obligatoria</div>}
                   </td>
-                  <td style={celda}>
+                  <td>
                     {i.proveedores.length === 0 && extras.length === 0 && (
-                      <div style={{ fontSize: 11 }}>Sin proveedor vinculado: agrega uno</div>
+                      <div className="mod-sub">Sin proveedor vinculado: agrega uno</div>
                     )}
                     {i.proveedores.map((p) => (
-                      <label key={p.proveedor_id} style={{ display: 'block', fontSize: 13 }}>
+                      <label key={p.proveedor_id} className="mod-block mod-text">
                         <input
                           type="checkbox"
                           disabled={p.ya_en_solicitud}
@@ -317,7 +317,7 @@ export default function PorItem({
                           onChange={(e) => alternarProveedor(i, p.proveedor_id, e.target.checked)}
                         />{' '}
                         {p.proveedor}
-                        <span style={{ fontSize: 11 }}>
+                        <span className="mod-sub">
                           {[
                             p.codigo ? `ref ${p.codigo}` : '',
                             p.precio_erp !== null ? `ERP ${pesos(p.precio_erp)}` : '',
@@ -328,17 +328,17 @@ export default function PorItem({
                       </label>
                     ))}
                     {extras.map((id) => (
-                      <label key={id} style={{ display: 'block', fontSize: 13 }}>
+                      <label key={id} className="mod-block mod-text">
                         <input
                           type="checkbox"
                           checked={elegidosAhora.includes(id)}
                           onChange={(e) => alternarProveedor(i, id, e.target.checked)}
                         />{' '}
                         {nombreProv(id)}
-                        <span style={{ fontSize: 11 }}> · se vinculará al ítem</span>
+                        <span className="mod-sub"> · se vinculará al ítem</span>
                       </label>
                     ))}
-                    <div style={{ marginTop: 4 }}>
+                    <div className="mod-mt-1">
                       <Combobox
                         opciones={candidatos}
                         valor=""
@@ -354,38 +354,37 @@ export default function PorItem({
             })}
             {items.length === 0 && (
               <tr>
-                <td style={celda} colSpan={9}>
+                <td colSpan={9}>
                   {hayFiltro ? 'Ningún ítem coincide con el filtro' : 'No hay ítems con agotado reportado pendientes'}
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </table></TablaExcel>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center', fontSize: 13 }}>
-        <button type="button" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
+      <div className="mod-pager">
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
         <span>Página {pagina + 1} de {paginas} ({total} ítems)</span>
-        <button type="button" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
       </div>
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="mod-mt-3 mod-flex mod-gap-2 mod-center mod-wrap">
         <button
           type="button"
-          style={{ ...boton, fontWeight: 600 }}
+          className="ui-btn ui-btn--sm mod-semibold"
           disabled={marcados.length === 0 || guardando || sinCantidad.length > 0 || sinProveedor.length > 0}
           onClick={crear}
         >
           Crear solicitudes ({marcados.length} ítems → {nSolicitudes} proveedores)
         </button>
         {marcados.length > 0 && (
-          <button type="button" style={boton} onClick={() => setSel({})}>Limpiar selección</button>
+          <button type="button" className="ui-btn ui-btn--sm" onClick={() => setSel({})}>Limpiar selección</button>
         )}
         {sinCantidad.length > 0 && (
-          <span style={{ fontSize: 12 }}>Falta la cantidad en {sinCantidad.length} ítem(s) sin agotado reportado.</span>
+          <span className="mod-sub">Falta la cantidad en {sinCantidad.length} ítem(s) sin agotado reportado.</span>
         )}
         {sinProveedor.length > 0 && (
-          <span style={{ fontSize: 12 }}>Hay {sinProveedor.length} ítem(s) marcados sin proveedor elegido.</span>
+          <span className="mod-sub">Hay {sinProveedor.length} ítem(s) marcados sin proveedor elegido.</span>
         )}
       </div>
     </div>

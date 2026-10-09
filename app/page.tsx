@@ -76,6 +76,9 @@ export default async function HomePage() {
     const { slug } = organizaciones[0];
     const ctx = await obtenerContextoOrg(slug);
     const base = `/app/${encodeURIComponent(slug)}`;
+    // Con acceso a Cuentas por pagar, la página de la organización decide: selector (si también
+    // tiene Pedidos) o entrada directa a CXP. Sin CXP, nada cambia.
+    if (ctx?.permisos.cxp || ctx?.permisos.cxpPagos) redirect(base);
     if (ctx?.permisos.agotados) redirect(`${base}/agotados`);
     if (ctx?.permisos.pedidos) redirect(`${base}/pedidos`);
     // Sin módulos (Predeterminado) o solo administración: la página de la organización lo resuelve.

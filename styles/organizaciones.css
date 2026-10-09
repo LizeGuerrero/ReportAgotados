@@ -124,7 +124,7 @@
 }
 .adm-tab[aria-selected="true"] {
   color: var(--color-text);
-  border-bottom-color: var(--color-ink);
+  border-bottom-color: var(--color-accent);
 }
 .adm-tab:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -337,7 +337,7 @@
   height: 1.125rem;
   margin: 0;
   cursor: pointer;
-  accent-color: var(--color-ink);
+  accent-color: var(--color-primary);
 }
 .adm-check:disabled {
   cursor: not-allowed;

@@ -5,7 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import PorProveedor from '@/components/pedidos/PorProveedor';
-import { boton, celda, fecha, PanelTexto, TABLAS_PEDIDOS } from '@/components/pedidos/comun';
+import { fecha, PanelTexto, TABLAS_PEDIDOS } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface Solicitud {
   id: string;
@@ -94,8 +95,8 @@ export default function Solicitudes({
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-        <button type="button" style={{ ...boton, fontWeight: 600 }} onClick={() => setNueva(true)}>
+      <div className="mod-flex mod-gap-2 mod-mb-3 mod-center">
+        <button type="button" className="ui-btn ui-btn--sm mod-semibold" onClick={() => setNueva(true)}>
           + Nueva solicitud de cotización
         </button>
         <Combobox
@@ -110,10 +111,10 @@ export default function Solicitudes({
           vacio="Todas"
           ancho={200}
         />
-        <button type="button" style={boton} onClick={cargar}>Actualizar</button>
+        <button type="button" className="ui-btn ui-btn--sm" onClick={cargar}>Actualizar</button>
       </div>
 
-      {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
 
       {texto && (
         <PanelTexto
@@ -124,41 +125,43 @@ export default function Solicitudes({
         />
       )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <TablaExcel clave="solicitudes-1" etiqueta="Tabla de solicitudes de cotización"><table className="mod-table">
           <thead>
             <tr>
               {['N°', 'Proveedor', 'Estado', 'Ítems', 'Respondidos', 'Creada', 'Enviada', 'Acción'].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filas.map((s) => (
               <tr key={s.id}>
-                <td style={celda}>{s.numero_texto}</td>
-                <td style={celda}>{s.proveedor}</td>
-                <td style={celda}>{ESTADO_TEXTO[s.estado]}</td>
-                <td style={celda}>{s.items}</td>
-                <td style={celda}>{s.respondidos}/{s.items}</td>
-                <td style={celda}>{fecha(s.fecha_creacion)}</td>
-                <td style={celda}>{fecha(s.fecha_envio)}</td>
-                <td style={celda}>
+                <td>{s.numero_texto}</td>
+                <td>{s.proveedor}</td>
+                <td>
+                  <span className={s.estado === 'borrador' ? 'ui-badge ui-badge--warning' : s.estado === 'enviada' ? 'ui-badge ui-badge--info' : 'ui-badge'}>
+                    {ESTADO_TEXTO[s.estado]}
+                  </span>
+                </td>
+                <td>{s.items}</td>
+                <td>{s.respondidos}/{s.items}</td>
+                <td>{fecha(s.fecha_creacion)}</td>
+                <td>{fecha(s.fecha_envio)}</td>
+                <td>
                   {s.estado !== 'cerrada' && (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button type="button" style={boton} onClick={() => verTexto(s)}>Ver / copiar</button>
-                      <button type="button" style={boton} onClick={() => cerrar(s)}>Cerrar</button>
+                    <div className="mod-flex mod-gap-2">
+                      <button type="button" className="ui-btn ui-btn--sm ui-btn--soft" onClick={() => verTexto(s)}>Ver / copiar</button>
+                      <button type="button" className="ui-btn ui-btn--sm" onClick={() => cerrar(s)}>Cerrar</button>
                     </div>
                   )}
                 </td>
               </tr>
             ))}
             {filas.length === 0 && (
-              <tr><td style={celda} colSpan={8}>No hay solicitudes</td></tr>
+              <tr><td colSpan={8}>No hay solicitudes</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </table></TablaExcel>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { calcularFortaleza } from '@/lib/passwordRules';
 // color para mantener contraste AA sobre fondo blanco (el amarillo y el naranja
 // vivos no lo cumplen como texto).
 const COLORES = ['#dc2626', '#f97316', '#eab308', '#16a34a'];
-const COLORES_TEXTO = ['#b91c1c', '#c2410c', '#a16207', '#15803d'];
+const COLORES_TEXTO = ['var(--color-danger)', 'var(--color-warning)', 'var(--color-warning)', 'var(--color-success)'];
 const ETIQUETAS = ['Muy débil', 'Débil', 'Aceptable', 'Fuerte'];
 
 export function PasswordStrengthBar({ password }: { password: string }) {

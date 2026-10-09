@@ -6,7 +6,16 @@ export interface ContextoOrg {
   nombreUsuario: string;
   iniciales: string;
   /** Módulos que el usuario puede ver, según tiene_permiso() en la base de datos. */
-  permisos: { agotados: boolean; pedidos: boolean; items: boolean };
+  permisos: {
+    agotados: boolean;
+    pedidos: boolean;
+    items: boolean;
+    proveedores: boolean;
+    /** Cuentas por pagar: cartera pendiente. */
+    cxp: boolean;
+    /** Cuentas por pagar: documentos pagados. */
+    cxpPagos: boolean;
+  };
   /** Administrador activo de esta organización (rol "admin"). */
   esAdmin: boolean;
 }
@@ -37,11 +46,14 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
       p_accion: 'ver',
     });
 
-  const [perfil, agotados, pedidos, items, admin] = await Promise.all([
+  const [perfil, agotados, pedidos, items, proveedores, cxp, cxpPagos, admin] = await Promise.all([
     supabase.from('profiles').select('nombres, apellidos, username').eq('id', user.id).maybeSingle(),
     permiso('reporte_agotados'),
     permiso('pedidos'),
     permiso('Items'),
+    permiso('Proveedores'),
+    permiso('cxp'),
+    permiso('cxp_pagos'),
     supabase.rpc('es_admin_org', { p_org: organizacion.id }),
   ]);
 
@@ -56,7 +68,14 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
     organizacion,
     nombreUsuario,
     iniciales,
-    permisos: { agotados: agotados.data === true, pedidos: pedidos.data === true, items: items.data === true },
+    permisos: {
+      agotados: agotados.data === true,
+      pedidos: pedidos.data === true,
+      items: items.data === true,
+      proveedores: proveedores.data === true,
+      cxp: cxp.data === true,
+      cxpPagos: cxpPagos.data === true,
+    },
     esAdmin: admin.data === true,
   };
 });

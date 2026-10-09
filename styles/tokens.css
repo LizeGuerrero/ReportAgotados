@@ -1,46 +1,69 @@
 /*
  * Tokens de diseño. Única fuente de verdad para colores, radios, sombras y
- * tamaños. Los valores base son los que el proyecto ya usaba (#111827 botón,
- * #2563eb links, #d1d5db bordes, #6b7280 texto secundario); se les agregó
- * escala de superficies y estados para no repetir valores sueltos.
+ * tamaños. Todos los componentes consumen estas variables; el tema se cambia
+ * redefiniéndolas bajo [data-theme="dark"] (ver components/app/ThemeToggle.tsx
+ * y el script de app/layout.tsx).
+ *
+ * Los nombres de las variables se conservan de la versión anterior para no
+ * tocar los componentes que ya las usaban. Se añaden:
+ *   --color-bg            fondo de la página (detrás de las tarjetas)
+ *   --color-surface-raised superficie por encima de una tarjeta (popovers, menús)
+ *   --color-input         fondo de campos de texto y selects
+ *   --color-primary*      acción principal (antes era --color-ink, un negro fijo)
+ *   --color-edit*         acción de editar / consultar (neutra con acento)
+ *   --color-selection*    selección de celdas y filas activas
+ *   --color-table-head    fondo del encabezado de tablas
  */
 :root {
+  color-scheme: light;
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* Texto */
-  --color-text: #111827;
-  --color-text-muted: #4b5563;   /* 7.5:1 sobre blanco */
-  --color-text-subtle: #6b7280;  /* 4.8:1 sobre blanco (mínimo AA) */
+  --color-text: #0f1b2d;
+  --color-text-muted: #475569;
+  --color-text-subtle: #64748b;
   --color-on-ink: #ffffff;
 
-  /* Superficies y bordes */
+  /* Fondo y superficies (blanco solo en tarjetas; el fondo es gris azulado) */
+  --color-bg: #eef2f7;
   --color-surface: #ffffff;
-  --color-surface-muted: #f9fafb;
-  --color-surface-hover: #f3f4f6;
-  --color-border: #d1d5db;
-  --color-border-strong: #9ca3af;
-  --color-border-subtle: #e5e7eb;
+  --color-surface-muted: #f6f8fb;
+  --color-surface-hover: #eaf0f7;
+  --color-surface-raised: #ffffff;
+  --color-input: #ffffff;
+  --color-table-head: #e9eff6;
+  --color-border: #cbd5e1;
+  --color-border-strong: #94a3b8;
+  --color-border-subtle: #dde5ee;
 
-  /* Acción principal (el botón oscuro que ya tenía el proyecto) */
-  --color-ink: #111827;
-  --color-ink-hover: #1f2937;
+  /* Acción principal: azul mar */
+  --color-primary: #0b5d8f;
+  --color-primary-hover: #0a4f7a;
+  --color-ink: var(--color-primary);
+  --color-ink-hover: var(--color-primary-hover);
 
   /* Acento: links, foco, selección */
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --color-accent-soft: #eff6ff;
-  --color-accent-border: #bfdbfe;
+  --color-accent: #1d6fb8;
+  --color-accent-hover: #0f5a9c;
+  --color-accent-soft: #e6f1fb;
+  --color-accent-border: #b4d3ee;
 
-  /* Estados (el texto usa tonos 700-800 para cumplir contraste AA sobre su fondo suave) */
-  --color-danger: #b91c1c;
-  --color-danger-soft: #fef2f2;
-  --color-danger-border: #fecaca;
-  --color-success: #166534;
-  --color-success-soft: #f0fdf4;
-  --color-success-border: #bbf7d0;
-  --color-warning: #92400e;
-  --color-warning-soft: #fffbeb;
-  --color-warning-border: #fde68a;
+  /* Selección de celdas / fila activa */
+  --color-selection: #e3effa;
+  --color-row-active: #f1f7fd;
+  --color-overlay-accent: rgb(29 111 184 / 0.1);
+
+  /* Estados (texto en tonos oscuros para contraste AA sobre su fondo suave) */
+  --color-danger: #b42318;
+  --color-danger-soft: #fef3f2;
+  --color-danger-border: #fecdca;
+  --color-danger-solid: #b42318;
+  --color-success: #15692f;
+  --color-success-soft: #ecfdf3;
+  --color-success-border: #abefc6;
+  --color-warning: #8a4b0c;
+  --color-warning-soft: #fffaeb;
+  --color-warning-border: #fedf89;
   --color-violet: #5b21b6;
   --color-violet-soft: #f5f3ff;
   --color-violet-border: #ddd6fe;
@@ -49,11 +72,74 @@
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
-  --shadow-sm: 0 1px 2px rgb(17 24 39 / 0.06);
-  --shadow-md: 0 8px 24px rgb(17 24 39 / 0.1);
-  --focus-ring: 0 0 0 3px rgb(37 99 235 / 0.35);
+  --shadow-sm: 0 1px 2px rgb(15 27 45 / 0.06);
+  --shadow-md: 0 8px 24px rgb(15 27 45 / 0.12);
+  --focus-ring: 0 0 0 3px rgb(29 111 184 / 0.35);
+  --focus-ring-danger: 0 0 0 3px rgb(180 35 24 / 0.25);
+
+  /* Flecha de los <select>: un SVG por tema (un data-URI no puede leer variables CSS) */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
 
   /* Tamaños de control: 44px cumple el objetivo táctil recomendado */
   --control-h: 2.75rem;
   --control-h-sm: 2rem;
+}
+
+/* Dark: grises azulados y azul profundo; nunca negro puro */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-text: #e4ebf3;
+  --color-text-muted: #aab8ca;
+  --color-text-subtle: #8496ab;
+  --color-on-ink: #f5f9ff;
+
+  --color-bg: #0e1620;
+  --color-surface: #162231;
+  --color-surface-muted: #1b2a3b;
+  --color-surface-hover: #223449;
+  --color-surface-raised: #1d2d40;
+  --color-input: #101b28;
+  --color-table-head: #1c2c3f;
+  --color-border: #34485f;
+  --color-border-strong: #51677f;
+  --color-border-subtle: #263950;
+
+  --color-primary: #2b78b3;
+  --color-primary-hover: #3688c6;
+
+  --color-accent: #5aa6e0;
+  --color-accent-hover: #86bff0;
+  --color-accent-soft: #17314a;
+  --color-accent-border: #28527a;
+
+  --color-selection: #1b3a57;
+  --color-row-active: #182c42;
+  --color-overlay-accent: rgb(90 166 224 / 0.14);
+
+  --color-danger: #f1948a;
+  --color-danger-soft: #3a1f26;
+  --color-danger-border: #6b3039;
+  --color-danger-solid: #c0392b;
+  --color-success: #7dd6a0;
+  --color-success-soft: #14332a;
+  --color-success-border: #24593f;
+  --color-warning: #f0c36d;
+  --color-warning-soft: #372d17;
+  --color-warning-border: #6a5422;
+  --color-violet: #c4b5fd;
+  --color-violet-soft: #2a2347;
+  --color-violet-border: #4c3f86;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 10px 28px rgb(0 0 0 / 0.5);
+  --focus-ring: 0 0 0 3px rgb(90 166 224 / 0.45);
+  --focus-ring-danger: 0 0 0 3px rgb(241 148 138 / 0.35);
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238496ab'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+/* Fondo y texto base de toda la aplicación */
+body {
+  color: var(--color-text);
+  background-color: var(--color-bg);
 }

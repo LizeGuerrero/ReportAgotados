@@ -1,0 +1,576 @@
+/*
+ * Pedidos, Ítems y Proveedores.
+ *
+ * Estas pantallas hablan el mismo idioma visual que Agotados (agotados.css):
+ * mismo encabezado, misma tabla (cabecera con fondo propio, hover de fila,
+ * bordes suaves), mismos botones y campos (ui.css) y mismas insignias.
+ * Todos los colores salen de tokens.css, así que el tema claro/oscuro se
+ * aplica solo.
+ *
+ * Convenciones:
+ *   mod-*   componentes de estas pantallas (página, tarjeta, tabla, pestañas…)
+ *   is-*    estados de una fila o pestaña (is-active, is-inactive, is-selected…)
+ *   Las clases de espaciado y texto (mod-mt-*, mod-gap-*, mod-text…) están al
+ *   final del archivo: van después de los componentes a propósito, para ganar
+ *   en caso de empate de especificidad.
+ */
+
+/* ---------- Página y encabezado (igual que .ag-page / .ag-head) ---------- */
+
+.mod-page {
+  padding: 1.25rem 1rem 2rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+}
+@media (min-width: 48rem) {
+  .mod-page {
+    padding: 1.75rem 1.5rem 2.5rem;
+  }
+}
+.mod-head {
+  margin: 0 0 1.25rem;
+}
+.mod-title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+/* Subtítulos dentro de una pantalla */
+.mod-h2 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.mod-h3 {
+  margin: 0.75rem 0 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* ---------- Tarjetas y avisos ---------- */
+
+.mod-card {
+  box-sizing: border-box;
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.mod-card > :first-child {
+  margin-top: 0;
+}
+.mod-card--narrow {
+  max-width: 36rem;
+}
+
+.mod-note {
+  box-sizing: border-box;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-warning);
+  background-color: var(--color-warning-soft);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+}
+
+.mod-error {
+  margin: 0.375rem 0;
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+}
+.mod-muted {
+  color: var(--color-text-muted);
+}
+
+/* Pantalla de acceso restringido o centrada dentro de un módulo */
+.mod-center-card {
+  box-sizing: border-box;
+  max-width: 24rem;
+  margin: 3.5rem auto;
+  padding: 1.5rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Barra de herramientas, filas y paginación ---------- */
+
+.mod-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.mod-toolbar--top {
+  align-items: flex-start;
+}
+.mod-pager {
+  position: sticky; /* barra fija: Anterior / Siguiente siempre quedan a la vista */
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  background-color: var(--color-bg);
+}
+
+/* En la barra de herramientas los controles miden lo mismo que en Agotados (44 px) */
+.mod-toolbar .ui-input--sm {
+  min-height: var(--control-h);
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+}
+.mod-toolbar .ui-btn--sm {
+  min-height: var(--control-h);
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+}
+/* Un combo con búsqueda dentro de una celda es compacto */
+.mod-table .ui-combo .ui-input {
+  min-height: var(--control-h-sm);
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+  font-size: 0.8125rem;
+}
+
+/* ---------- Pestañas (misma idea que .adm-tab y la navegación superior) ---------- */
+
+.mod-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.mod-tab {
+  min-height: var(--control-h);
+  padding: 0 0.875rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.mod-tab:hover {
+  color: var(--color-text);
+}
+.mod-tab.is-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+.mod-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Tabla (igual que .ag-table, pero de ancho natural) ---------- */
+
+.mod-scroll {
+  overflow-x: auto;
+}
+.mod-table {
+  width: 100%;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--radius-lg);
+}
+.mod-table--auto {
+  width: auto;
+}
+.mod-table th,
+.mod-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.mod-table th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  background-color: var(--color-table-head);
+  border-bottom-color: var(--color-border);
+}
+.mod-table tr:first-child > th:first-child {
+  border-top-left-radius: calc(var(--radius-lg) - 1px);
+}
+.mod-table tr:first-child > th:last-child {
+  border-top-right-radius: calc(var(--radius-lg) - 1px);
+}
+.mod-table tbody tr:last-child > td,
+.mod-table > tr:last-child > td {
+  border-bottom: 0;
+}
+.mod-table tbody tr:hover > td {
+  background-color: var(--color-surface-hover);
+}
+
+/* Estados de fila */
+.mod-table tr.is-clickable {
+  cursor: pointer;
+}
+.mod-table tr.is-inactive,
+.is-inactive {
+  opacity: 0.55;
+}
+.is-faded {
+  opacity: 0.5;
+}
+.mod-table tr.is-selected > td,
+.mod-table td.is-selected {
+  background-color: var(--color-selection);
+}
+.mod-table td.is-strong {
+  font-weight: 700;
+}
+.mod-table td.mod-nowrap,
+.mod-nowrap {
+  white-space: nowrap;
+}
+.mod-prewrap {
+  white-space: pre-wrap;
+}
+.mod-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Tabla tipo Excel (components/TablaExcel.tsx) ----------
+ * Mismo comportamiento que .ag-tablewrap de Agotados: el recuadro mide lo que
+ * queda de pantalla (TablaExcel calcula el alto exacto; esto es el respaldo),
+ * el encabezado queda fijo y la paginación de debajo siempre es visible.
+ */
+
+.mod-tablebox {
+  min-width: 0;
+}
+.mod-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+.mod-tools__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mod-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  min-height: 1.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+.mod-summary strong {
+  color: var(--color-text);
+}
+
+.mod-tablewrap {
+  scroll-padding-top: 3rem; /* al mover la selección con el teclado, no queda tapada por el encabezado fijo */
+  min-height: 14rem;
+  max-height: calc(100dvh - 22rem);
+  overflow: auto;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+}
+.mod-tablewrap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.mod-tablewrap .mod-table {
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+.mod-tablewrap .mod-table tr:first-child > th:first-child,
+.mod-tablewrap .mod-table tr:first-child > th:last-child {
+  border-radius: 0;
+}
+
+/* Encabezado fijo */
+.mod-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+/* Layout fijo una vez que TablaExcel mide las columnas: los anchos los manda <colgroup> */
+.mod-table--fixed th,
+.mod-table--fixed td {
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+.mod-table--fixed th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mod-table--fixed td .ui-input {
+  max-width: 100%;
+}
+
+/* El texto de las celdas no se subraya al arrastrar; los campos editables sí conservan su selección de texto */
+.mod-table tbody td {
+  cursor: cell;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.mod-table tbody td input,
+.mod-table tbody td textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Tiradores de tamaño (columna y fila) */
+.mod-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 0.5rem;
+  cursor: col-resize;
+  touch-action: none;
+}
+.mod-resizer::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 2px;
+  bottom: 20%;
+  width: 2px;
+  background-color: transparent;
+  border-radius: 1px;
+}
+.mod-resizer:hover::after,
+.mod-resizer:focus-visible::after {
+  background-color: var(--color-accent);
+}
+.mod-resizer:focus-visible {
+  outline: none;
+}
+.mod-table td.mod-rowhead {
+  position: relative;
+}
+.mod-rowresizer {
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  left: 0;
+  z-index: 1;
+  height: 0.4375rem;
+  cursor: row-resize;
+  touch-action: none;
+}
+.mod-rowresizer:hover {
+  background-color: var(--color-accent);
+}
+
+/* Selección de celdas (arrastrar como en Excel). Va después del hover de fila para ganar */
+.mod-table tbody tr td.mod-sel {
+  position: relative;
+  background-color: var(--color-selection);
+}
+.mod-table tbody tr td.mod-sel--activa {
+  background-color: var(--color-surface);
+}
+/* Un solo marco alrededor del rango: cada celda dibuja únicamente el lado que le toca */
+.mod-table tbody td.mod-sel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 0 solid var(--color-accent);
+}
+.mod-table tbody td.mod-sel--t::after {
+  border-top-width: 2px;
+}
+.mod-table tbody td.mod-sel--b::after {
+  border-bottom-width: 2px;
+}
+.mod-table tbody td.mod-sel--l::after {
+  border-left-width: 2px;
+}
+.mod-table tbody td.mod-sel--r::after {
+  border-right-width: 2px;
+}
+
+/* Aviso (copiado, errores) */
+.mod-toast {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  z-index: 50;
+  box-sizing: border-box;
+  max-width: calc(100vw - 2rem);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-on-ink);
+  background-color: var(--color-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transform: translateX(-50%);
+}
+.mod-toast--error {
+  background-color: var(--color-danger-solid);
+}
+
+@media (max-width: 40rem) {
+  .mod-tablewrap {
+    max-height: calc(100dvh - 24rem);
+  }
+  .mod-tools__buttons .ui-btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Formularios ---------- */
+
+.mod-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+.mod-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.mod-check {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.mod-check input {
+  accent-color: var(--color-primary);
+}
+
+/* Los campos de los módulos miden lo que su contenido o su ancho indiquen,
+   no el 100% de la fila como los de los formularios de acceso. */
+.ui-input.mod-auto {
+  width: auto;
+}
+/* Campo dentro de una celda de tabla (cantidades, costos, días…) */
+.ui-input.mod-cell-input {
+  width: auto;
+  min-height: 1.75rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.8125rem;
+}
+/* Campo obligatorio sin llenar */
+.ui-input.is-missing {
+  border-color: var(--color-danger);
+  border-width: 2px;
+}
+.ui-input.mod-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+}
+.mod-list {
+  margin: 0.375rem 0 0.5rem 1.125rem;
+  padding: 0;
+}
+
+/* Opción elegida en la comparación de cotizaciones */
+.mod-pick {
+  padding: 0.125rem;
+  background-color: var(--color-surface);
+}
+.mod-pick.is-selected {
+  background-color: var(--color-selection);
+}
+
+/* Marcas de texto: mejor costo / preferido y avisos */
+.mod-star {
+  color: var(--color-warning);
+}
+.mod-warn {
+  color: var(--color-warning);
+}
+
+/* Desplegable de ítems de una orden */
+.mod-table details summary {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.mod-table details summary:hover {
+  color: var(--color-accent-hover);
+}
+.mod-table details[open] summary {
+  margin-bottom: 0.25rem;
+}
+
+/* ---------- Utilidades (al final para ganar empates) ---------- */
+
+.mod-flex { display: flex; }
+.mod-wrap { flex-wrap: wrap; }
+.mod-col { flex-direction: column; }
+.mod-center { align-items: center; }
+.mod-start { align-items: flex-start; }
+.mod-block { display: block; }
+.mod-grid { display: grid; }
+.mod-gap-1 { gap: 0.25rem; }
+.mod-gap-2 { gap: 0.5rem; }
+.mod-gap-3 { gap: 0.75rem; }
+.mod-gap-4 { gap: 1rem; }
+.mod-mt-1 { margin-top: 0.25rem; }
+.mod-mt-2 { margin-top: 0.5rem; }
+.mod-mt-3 { margin-top: 0.75rem; }
+.mod-mt-4 { margin-top: 1rem; }
+.mod-mt-5 { margin-top: 1.5rem; }
+.mod-mb-1 { margin-bottom: 0.25rem; }
+.mod-mb-2 { margin-bottom: 0.5rem; }
+.mod-mb-3 { margin-bottom: 0.75rem; }
+.mod-mb-4 { margin-bottom: 1rem; }
+.mod-mt-0 { margin-top: 0; }
+.mod-mb-0 { margin-bottom: 0; }
+.mod-text { font-size: 0.8125rem; }
+.mod-md { font-size: 0.875rem; }
+.mod-lg { font-size: 1rem; }
+.mod-pointer { cursor: pointer; }
+.mod-sub { font-size: 0.75rem; color: var(--color-text-muted); }
+.mod-semibold { font-weight: 600; }
+.mod-bold { font-weight: 700; }

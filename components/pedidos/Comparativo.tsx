@@ -6,8 +6,9 @@ import Combobox from '@/components/Combobox';
 import SelectorLinea from '@/components/SelectorLinea';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import {
-  boton, campo, celda, idVisible, pesos, TABLAS_PEDIDOS, textoCajas,
+  idVisible, pesos, TABLAS_PEDIDOS, textoCajas,
 } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 const POR_PAGINA = 50;
 
@@ -154,13 +155,13 @@ export default function Comparativo({
 
   return (
     <div>
-      <p style={{ fontSize: 13, margin: '0 0 8px' }}>
+      <p className="mod-text mod-mt-0 mod-mb-2">
         Compara lo que respondió cada proveedor. Digita el costo antes de IVA y sal del campo para guardarlo;
         marca “No disponible” si no lo tiene. ★ es el mejor costo con IVA de cada ítem. Los ganadores se convierten
         en órdenes en la pestaña “Órdenes de compra”.
       </p>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div className="mod-toolbar mod-toolbar--top">
         <SelectorLinea
           lineas={lineas}
           valor={linea}
@@ -173,10 +174,10 @@ export default function Comparativo({
           value={textoBusqueda}
           onChange={(e) => setTextoBusqueda(e.target.value)}
           placeholder="Buscar por ítem o nombre"
-          style={{ ...campo, minWidth: 240 }}
+          className="ui-input ui-input--sm mod-auto" style={{ minWidth: 240 }}
         />
         <Combobox
-          opciones={proveedoresPagina.map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: `NIT ${p.id}` }))}
+          opciones={proveedoresPagina.map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: p.documento }))}
           valor={proveedor}
           onCambio={setProveedor}
           etiqueta="Proveedor"
@@ -191,25 +192,24 @@ export default function Comparativo({
           vacio="Todos los estados"
           ancho={230}
         />
-        <button type="button" style={boton} onClick={cargar}>Actualizar</button>
+        <button type="button" className="ui-btn ui-btn--sm" onClick={cargar}>Actualizar</button>
       </div>
 
-      {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
 
-      <div style={{ fontSize: 13, marginBottom: 8 }}>
+      <div className="mod-text mod-mb-2">
         {total} ítem(s) en cotización · {conGanador} con ganador en esta página
         {(estado || proveedor) && ` · mostrando ${visibles.length} con el filtro (se aplica a esta página)`}
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <TablaExcel clave="comparativo-1" etiqueta="Tabla comparativa de cotizaciones"><table className="mod-table">
           <thead>
             <tr>
               {['Item', 'Nombre Base', 'Cant.'].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
               {columnas.map((p) => (
-                <th key={p.id} style={{ ...celda, fontWeight: 600, minWidth: 190 }}>{p.nombre}</th>
+                <th key={p.id} style={{ minWidth: 190 }}>{p.nombre}</th>
               ))}
             </tr>
           </thead>
@@ -220,19 +220,19 @@ export default function Comparativo({
                 .map((c) => c.costo_con_iva as number);
               const mejor = conIva.length > 0 ? Math.min(...conIva) : null;
               return (
-                <tr key={f.item_id} style={{ verticalAlign: 'top' }}>
-                  <td style={celda}>{idVisible(f.item_id, f.provisional, f.codigo)}</td>
-                  <td style={celda}>
+                <tr key={f.item_id} >
+                  <td>{idVisible(f.item_id, f.provisional, f.codigo)}</td>
+                  <td>
                     {f.nombre_base}
-                    {f.agotado_sedes && <div style={{ fontSize: 11 }}>Agotado en {f.agotado_sedes.join(', ')}</div>}
-                    {f.origen === 'manual' && <div style={{ fontSize: 11 }}>Iniciado por Compras</div>}
-                    {f.provisional && <div style={{ fontSize: 11 }}>Ítem provisional</div>}
+                    {f.agotado_sedes && <div className="mod-sub">Agotado en {f.agotado_sedes.join(', ')}</div>}
+                    {f.origen === 'manual' && <div className="mod-sub">Iniciado por Compras</div>}
+                    {f.provisional && <div className="mod-sub">Ítem provisional</div>}
                   </td>
-                  <td style={celda}>{f.cantidad_a_cotizar ?? ''}</td>
+                  <td>{f.cantidad_a_cotizar ?? ''}</td>
                   {columnas.map((p) => {
                     const c = f.cotizaciones.find((x) => x.proveedor_id === p.id);
                     return (
-                      <td key={p.id} style={celda}>
+                      <td key={p.id}>
                         {c ? (
                           <CeldaCotizacion
                             key={firma(c)}
@@ -243,7 +243,7 @@ export default function Comparativo({
                             avisar={setError}
                           />
                         ) : (
-                          <span style={{ fontSize: 12 }}>—</span>
+                          <span className="mod-sub">—</span>
                         )}
                       </td>
                     );
@@ -253,7 +253,7 @@ export default function Comparativo({
             })}
             {visibles.length === 0 && (
               <tr>
-                <td style={celda} colSpan={3 + columnas.length}>
+                <td colSpan={3 + columnas.length}>
                   {filas.length === 0
                     ? 'No hay ítems en cotización. Crea solicitudes desde la pestaña “Por proveedor”.'
                     : 'Ningún ítem coincide con el filtro'}
@@ -261,13 +261,12 @@ export default function Comparativo({
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </table></TablaExcel>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center', fontSize: 13 }}>
-        <button type="button" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
+      <div className="mod-pager">
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
         <span>Página {pagina + 1} de {paginas}</span>
-        <button type="button" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
       </div>
     </div>
   );
@@ -293,7 +292,6 @@ function CeldaCotizacion({
 
   const conIva = costo === '' ? null : Math.round(Number(costo) * (1 + c.iva) * 100) / 100;
   const puedeElegir = c.disponible === true && c.costo_unitario !== null;
-  const entrada = { border: '1px solid #000', padding: 2, color: '#000', background: '#fff' } as const;
 
   function guardar(noDisponible: boolean) {
     if (!noDisponible && !(Number(costo) > 0)) {
@@ -337,9 +335,9 @@ function CeldaCotizacion({
   }
 
   return (
-    <div style={{ background: c.seleccionado ? '#e8e8e8' : '#fff', padding: 2 }}>
-      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-        {esMejor && <span aria-label="Mejor costo" title="Mejor costo con IVA">★</span>}
+    <div className={c.seleccionado ? 'mod-pick is-selected' : 'mod-pick'}>
+      <div className="mod-flex mod-gap-1 mod-center">
+        {esMejor && <span className="mod-star" aria-label="Mejor costo" title="Mejor costo con IVA">★</span>}
         <input
           value={costo}
           inputMode="decimal"
@@ -352,22 +350,22 @@ function CeldaCotizacion({
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur();
           }}
-          style={{ ...entrada, width: 100 }}
+          className="ui-input ui-input--sm mod-cell-input" style={{ width: 100 }}
           aria-label={`Costo ${c.proveedor}, ítem ${fila.item_id}`}
         />
       </div>
 
-      {conIva !== null && !nd && <div style={{ fontSize: 11 }}>{pesos(conIva)} con IVA</div>}
-      {c.fecha_respuesta === null && !nd && costo === '' && <div style={{ fontSize: 11 }}>Sin respuesta</div>}
+      {conIva !== null && !nd && <div className="mod-sub">{pesos(conIva)} con IVA</div>}
+      {c.fecha_respuesta === null && !nd && costo === '' && <div className="mod-sub">Sin respuesta</div>}
       {(c.dias_entrega !== null || (c.flete ?? 0) > 0) && !nd && (
-        <div style={{ fontSize: 11 }}>
+        <div className="mod-sub">
           {[c.dias_entrega !== null ? `${c.dias_entrega} d` : '', (c.flete ?? 0) > 0 ? `flete ${pesos(c.flete)}` : '']
             .filter(Boolean).join(' · ')}
         </div>
       )}
-      {c.precio_erp !== null && <div style={{ fontSize: 11 }}>ERP {pesos(c.precio_erp)}</div>}
+      {c.precio_erp !== null && <div className="mod-sub">ERP {pesos(c.precio_erp)}</div>}
 
-      <label style={{ fontSize: 12, display: 'block' }}>
+      <label className="mod-sub mod-block">
         <input
           type="checkbox"
           checked={nd}
@@ -379,37 +377,37 @@ function CeldaCotizacion({
         No disponible
       </label>
 
-      <label style={{ fontSize: 12, display: 'block' }}>
+      <label className="mod-sub mod-block">
         <input type="checkbox" checked={c.seleccionado} disabled={!puedeElegir} onChange={elegir} /> Elegir
       </label>
       {c.seleccionado && (
-        <div style={{ fontSize: 12 }}>
+        <div className="mod-sub">
           Cant. a pedir:{' '}
           <input
             value={cantPedir}
             inputMode="numeric"
             onChange={(e) => setCantPedir(e.target.value.replace(/\D/g, ''))}
             onBlur={guardarCantidadPedir}
-            style={{ ...entrada, width: 60 }}
+            className="ui-input ui-input--sm mod-cell-input" style={{ width: 60 }}
             aria-label={`Cantidad a pedir a ${c.proveedor}, ítem ${fila.item_id}`}
           />
-          <div style={{ fontSize: 11 }}>{textoCajas(Number(cantPedir), c.unidades_por_caja)}</div>
+          <div className="mod-sub">{textoCajas(Number(cantPedir), c.unidades_por_caja)}</div>
         </div>
       )}
 
-      <button type="button" style={{ ...boton, fontSize: 11, padding: '1px 4px', marginTop: 2 }} onClick={() => setMas((m) => !m)}>
+      <button type="button" className="ui-btn ui-btn--sm mod-mt-1" onClick={() => setMas((m) => !m)}>
         {mas ? 'Menos' : 'Más'}
       </button>
       {mas && (
-        <div style={{ fontSize: 12, marginTop: 4, display: 'grid', gap: 3 }}>
-          <label>Días <input value={dias} inputMode="numeric" onChange={(e) => setDias(e.target.value.replace(/\D/g, ''))} style={{ ...entrada, width: 50 }} /></label>
-          <label>Flete <input value={flete} inputMode="decimal" onChange={(e) => setFlete(e.target.value.replace(/[^\d.]/g, ''))} style={{ ...entrada, width: 80 }} /></label>
-          <label>Und/caja <input value={porCaja} inputMode="numeric" onChange={(e) => setPorCaja(e.target.value.replace(/\D/g, ''))} style={{ ...entrada, width: 50 }} /></label>
-          <label>Obs. <input value={obs} onChange={(e) => setObs(e.target.value)} style={{ ...entrada, width: 130 }} /></label>
-          <button type="button" style={boton} onClick={() => guardar(nd)}>Guardar detalle</button>
+        <div className="mod-sub mod-mt-1 mod-grid mod-gap-1">
+          <label>Días <input value={dias} inputMode="numeric" onChange={(e) => setDias(e.target.value.replace(/\D/g, ''))} className="ui-input ui-input--sm mod-cell-input" style={{ width: 50 }} /></label>
+          <label>Flete <input value={flete} inputMode="decimal" onChange={(e) => setFlete(e.target.value.replace(/[^\d.]/g, ''))} className="ui-input ui-input--sm mod-cell-input" style={{ width: 80 }} /></label>
+          <label>Und/caja <input value={porCaja} inputMode="numeric" onChange={(e) => setPorCaja(e.target.value.replace(/\D/g, ''))} className="ui-input ui-input--sm mod-cell-input" style={{ width: 50 }} /></label>
+          <label>Obs. <input value={obs} onChange={(e) => setObs(e.target.value)} className="ui-input ui-input--sm mod-cell-input" style={{ width: 130 }} /></label>
+          <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => guardar(nd)}>Guardar detalle</button>
         </div>
       )}
-      <div style={{ fontSize: 10 }}>{c.solicitud_numero}</div>
+      <div className="mod-sub">{c.solicitud_numero}</div>
     </div>
   );
 }

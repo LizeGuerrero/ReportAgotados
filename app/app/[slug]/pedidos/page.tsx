@@ -15,8 +15,10 @@ export default async function PedidosPage({ params }: { params: Promise<{ slug: 
   if (!organizacion) notFound();
 
   return (
-    <main style={{ padding: 16 }}>
-      <h1 style={{ fontSize: 20, margin: '0 0 12px' }}>Pedidos</h1>
+    <main className="mod-page">
+      <div className="mod-head">
+        <h1 className="mod-title">Pedidos</h1>
+      </div>
       <PedidosCompras organizacionId={organizacion.id} />
     </main>
   );

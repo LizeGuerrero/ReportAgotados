@@ -19,14 +19,14 @@ export default function SelectorLinea({
   lineas,
   valor,
   onCambio,
-  variante = 'clasica',
+  variante = 'ui',
 }: {
   lineas: string[];
   valor: string;
   onCambio: (v: string) => void;
   /**
-   * 'clasica' (por defecto) conserva el aspecto de siempre — es la que usa
-   * Pedidos. 'ui' usa las clases del sistema de diseño nuevo (Agotados).
+   * 'ui' (por defecto) usa las clases del sistema de diseño (Agotados, Pedidos,
+   * modo claro/oscuro). 'clasica' conserva el aspecto antiguo, sin soporte de tema.
    */
   variante?: 'clasica' | 'ui';
 }) {

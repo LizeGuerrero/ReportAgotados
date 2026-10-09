@@ -36,6 +36,11 @@ build/
 
 # Git
 .git/
-supabase/.temp/
+supabase/
 
 .vercel
+
+# Pruebas de base de datos (no contienen datos).
+!tests/db/0*.sql
+!tests/db/seed.sql
+!tests/db/stubs.sql

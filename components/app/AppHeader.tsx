@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LogoMark } from '@/components/ui/icons';
 import { NavModulos, type ModuloNav } from '@/components/app/NavModulos';
+import { ThemeToggle } from '@/components/app/ThemeToggle';
 
 interface Props {
   nombreOrganizacion: string;
@@ -23,6 +24,7 @@ export function AppHeader({ nombreOrganizacion, nombreUsuario, iniciales, modulo
         <NavModulos modulos={modulos} />
 
         <div className="app-user">
+          <ThemeToggle />
           <span className="app-user__avatar" aria-hidden="true">
             {iniciales}
           </span>

@@ -98,7 +98,7 @@ export function CompleteProfileForm({ userId, nombresIniciales = '', apellidosIn
   return (
     <main style={{ maxWidth: 380, margin: '60px auto', padding: 24 }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Completa tu perfil</h1>
-      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+      <p style={{ fontSize: 13, color: 'var(--color-text-subtle)', marginBottom: 16 }}>
         Necesitamos algunos datos más para continuar.
       </p>
 
@@ -184,7 +184,7 @@ export function CompleteProfileForm({ userId, nombresIniciales = '', apellidosIn
           />
         </label>
 
-        {error && <p style={{ color: '#dc2626', fontSize: 13 }}>{error}</p>}
+        {error && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>{error}</p>}
 
         <button type="submit" disabled={cargando} style={submitStyle}>
           {cargando ? 'Guardando...' : 'Guardar y continuar'}
@@ -197,7 +197,9 @@ export function CompleteProfileForm({ userId, nombresIniciales = '', apellidosIn
 const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   borderRadius: 8,
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--color-border)',
+  background: 'var(--color-input)',
+  color: 'var(--color-text)',
   fontSize: 14,
   width: '100%',
   boxSizing: 'border-box',
@@ -207,7 +209,7 @@ const submitStyle: React.CSSProperties = {
   padding: '10px 12px',
   borderRadius: 8,
   border: 'none',
-  background: '#111827',
+  background: 'var(--color-primary)',
   color: '#fff',
   cursor: 'pointer',
   fontSize: 14,

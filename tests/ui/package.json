@@ -1,0 +1,15 @@
+{
+  "name": "authgo-pruebas-ui",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas de interfaz del panel de administración (aisladas del package.json del proyecto).",
+  "scripts": {
+    "test": "node run.mjs roleditor.test.tsx && node run.mjs paneles.test.tsx"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.1.2"
+  }
+}

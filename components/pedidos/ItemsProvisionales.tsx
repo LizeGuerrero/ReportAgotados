@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useTiempoReal } from '@/components/useTiempoReal';
-import { boton, campo, celda, fecha, idVisible, TABLAS_PEDIDOS } from '@/components/pedidos/comun';
+import { fecha, idVisible, TABLAS_PEDIDOS } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface Provisional {
   item_id: number;
@@ -92,53 +93,52 @@ export default function ItemsProvisionales({
 
   return (
     <div>
-      <p style={{ fontSize: 13, margin: '0 0 12px' }}>
+      <p className="mod-text mod-mt-0 mod-mb-3">
         Ítems creados desde “Por proveedor” que aún no tienen su ID del ERP.
         {puedeVincular
           ? ' Cuando el ERP los registre, escribe aquí su ID para vincularlos.'
           : ' Un administrador los vincula cuando el ERP les asigne su ID.'}
       </p>
 
-      {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
       {aviso && (
-        <p style={{ fontSize: 13 }}>
+        <p className="mod-text">
           {aviso}{' '}
-          <button type="button" style={boton} onClick={() => setAviso('')}>Entendido</button>
+          <button type="button" className="ui-btn ui-btn--sm" onClick={() => setAviso('')}>Entendido</button>
         </p>
       )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <TablaExcel clave="itemsprovisionales-1" etiqueta="Tabla de ítems provisionales"><table className="mod-table">
           <thead>
             <tr>
               {['Ref.', 'Nombre', 'Línea', 'IVA', 'Creado', 'Solicitudes activas', 'Órdenes', 'Código del ERP'].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filas.map((f) => (
               <tr key={f.item_id}>
-                <td style={celda}>{idVisible(f.item_id, true)}</td>
-                <td style={celda}>{f.nombre_base}</td>
-                <td style={celda}>{f.linea ?? ''}</td>
-                <td style={celda}>{f.iva === null ? '' : `${Math.round(f.iva * 100)}%`}</td>
-                <td style={celda}>{fecha(f.creado)}</td>
-                <td style={celda}>{f.solicitudes_activas}</td>
-                <td style={celda}>{f.ordenes}</td>
-                <td style={celda}>
+                <td>{idVisible(f.item_id, true)}</td>
+                <td>{f.nombre_base}</td>
+                <td>{f.linea ?? ''}</td>
+                <td>{f.iva === null ? '' : `${Math.round(f.iva * 100)}%`}</td>
+                <td>{fecha(f.creado)}</td>
+                <td>{f.solicitudes_activas}</td>
+                <td>{f.ordenes}</td>
+                <td>
                   {puedeVincular ? (
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div className="mod-flex mod-gap-2">
                       <input
                         value={ids[f.item_id] ?? ''}
                         placeholder="Código ERP"
                         onChange={(e) => setIds((x) => ({ ...x, [f.item_id]: e.target.value.replace(/\D/g, '') }))}
-                        style={{ ...campo, width: 110, padding: 3 }}
+                        className="ui-input ui-input--sm" style={{ width: 110 }}
                         aria-label={`ID del ERP para ${f.nombre_base}`}
                       />
                       <button
                         type="button"
-                        style={boton}
+                        className="ui-btn ui-btn--sm ui-btn--primary"
                         disabled={trabajando === f.item_id || !ids[f.item_id]}
                         onClick={() => vincular(f)}
                       >
@@ -152,11 +152,10 @@ export default function ItemsProvisionales({
               </tr>
             ))}
             {filas.length === 0 && (
-              <tr><td style={celda} colSpan={8}>No hay ítems provisionales pendientes</td></tr>
+              <tr><td colSpan={8}>No hay ítems provisionales pendientes</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </table></TablaExcel>
     </div>
   );
 }

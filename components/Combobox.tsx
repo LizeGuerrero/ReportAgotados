@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useMemo, useRef, useState } from 'react';
+import { ChevronDownIcon } from '@/components/ui/icons';
 
 export interface OpcionCombo {
   valor: string;
@@ -12,14 +13,6 @@ export interface OpcionCombo {
 function normalizar(texto: string) {
   return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
-
-const campo: React.CSSProperties = {
-  padding: 6,
-  border: '1px solid #000',
-  color: '#000',
-  background: '#fff',
-  fontSize: 14,
-};
 
 /**
  * Lista desplegable con búsqueda: se escribe para filtrar las opciones (sin tildes ni mayúsculas),
@@ -92,9 +85,10 @@ export default function Combobox({
   const hayFiltro = valor !== '' || texto !== '';
 
   return (
-    <div style={{ position: 'relative', width: ancho }}>
+    <div className="ui-combo ui-combo--fixed" style={{ width: ancho }}>
       <input
         ref={entrada}
+        className="ui-input"
         aria-controls={abierto ? idLista : undefined}
         aria-autocomplete="list"
         value={abierto ? texto : actual?.texto ?? ''}
@@ -117,43 +111,31 @@ export default function Combobox({
           setAbierto(true);
         }}
         onKeyDown={teclado}
-        style={{ ...campo, width: '100%', boxSizing: 'border-box', paddingRight: 46 }}
       />
       {hayFiltro && vacio !== undefined && (
         <button
           type="button"
           aria-label={`Quitar filtro: ${etiqueta}`}
+          className="ui-combo__clear"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             onCambio('');
             setTexto('');
           }}
-          style={{
-            position: 'absolute', right: 24, top: 4, border: 0, background: 'transparent',
-            color: '#000', fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: '2px 4px',
-          }}
         >
           ×
         </button>
       )}
-      <span
-        aria-hidden
-        style={{ position: 'absolute', right: 8, top: 8, pointerEvents: 'none', fontSize: 12, color: '#000' }}
-      >
-        ▾
-      </span>
+      <ChevronDownIcon className="ui-combo__chevron" />
       {abierto && (
         <ul
           id={idLista}
           role="listbox"
+          className="ui-combo__list"
           onMouseDown={(e) => e.preventDefault()}
-          style={{
-            position: 'absolute', top: '100%', left: 0, right: 0, minWidth: ancho, zIndex: 10,
-            margin: '2px 0 0', padding: 0, listStyle: 'none', maxHeight: 280, overflowY: 'auto',
-            border: '1px solid #000', background: '#fff', color: '#000', fontSize: 14,
-          }}
+          style={{ minWidth: ancho }}
         >
-          {visibles.length === 0 && <li style={{ padding: '6px 8px' }}>Sin coincidencias</li>}
+          {visibles.length === 0 && <li className="ui-combo__empty">Sin coincidencias</li>}
           {visibles.map((op, i) => (
             <li
               key={op.valor || '__vacio'}
@@ -162,14 +144,10 @@ export default function Combobox({
               ref={i === activo ? (el) => el?.scrollIntoView({ block: 'nearest' }) : undefined}
               onClick={() => elegir(op.valor)}
               onMouseEnter={() => setActivo(i)}
-              style={{
-                padding: '6px 8px', cursor: 'pointer',
-                background: i === activo ? '#ddd' : '#fff',
-                fontWeight: op.valor === valor ? 600 : 400,
-              }}
+              className={i === activo ? 'ui-combo__option is-active' : 'ui-combo__option'}
             >
               {op.texto}
-              {op.detalle && <div style={{ fontSize: 11, fontWeight: 400 }}>{op.detalle}</div>}
+              {op.detalle && <div className="ui-combo__detail">{op.detalle}</div>}
             </li>
           ))}
         </ul>

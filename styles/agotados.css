@@ -1,4 +1,7 @@
-/* Reporte de agotados. Pedidos NO usa estas clases (sigue con su estilo actual). */
+/*
+ * Reporte de agotados: referencia visual del resto de módulos.
+ * Pedidos, Ítems y Proveedores usan las clases equivalentes de modulos.css.
+ */
 
 .ag-page {
   padding: 1.25rem 1rem 2rem;
@@ -76,7 +79,7 @@
   padding: 1rem;
   font-size: 0.875rem;
   color: var(--color-text);
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -105,7 +108,7 @@
   width: 1rem;
   height: 1rem;
   margin: 0.125rem 0 0;
-  accent-color: var(--color-ink);
+  accent-color: var(--color-primary);
 }
 
 .ag-alert {
@@ -171,8 +174,17 @@
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+/*
+ * Atenuado mientras se recarga la tabla. Cada acción provoca dos recargas seguidas (la propia y
+ * la del tiempo real, ~0,4 s después), y sin retraso la tabla "parpadeaba" dos veces. Con el
+ * retraso, una recarga rápida no llega a atenuarse; solo se nota si el servidor tarda.
+ */
+.ag-tablewrap tbody {
+  transition: opacity 0.15s ease;
+}
 .ag-tablewrap.is-loading tbody {
   opacity: 0.55;
+  transition: opacity 0.2s ease 0.45s;
 }
 
 /* Layout fijo: los anchos los manda <colgroup>, así se pueden cambiar arrastrando. */
@@ -211,7 +223,7 @@
   letter-spacing: 0.02em;
   white-space: nowrap;
   color: var(--color-text-muted);
-  background-color: var(--color-surface-muted);
+  background-color: var(--color-table-head);
   border-bottom-color: var(--color-border);
 }
 .ag-table thead th.ag-th--sort,
@@ -283,10 +295,10 @@ th[aria-sort="descending"] .ag-sort__down {
 }
 
 .ag-table tbody tr:hover td {
-  background-color: var(--color-surface-muted);
+  background-color: var(--color-surface-hover);
 }
 .ag-row--activo td {
-  background-color: #f8fbff;
+  background-color: var(--color-row-active);
 }
 
 /* ---------- Selección de celdas (arrastrar como en Excel) ---------- */
@@ -304,7 +316,7 @@ th[aria-sort="descending"] .ag-sort__down {
 }
 .ag-table tbody tr td.ag-sel {
   position: relative;
-  background-color: var(--color-accent-soft);
+  background-color: var(--color-selection);
 }
 .ag-table tbody tr td.ag-sel--activa {
   background-color: var(--color-surface);
@@ -375,7 +387,7 @@ th[aria-sort="descending"] .ag-sort__down {
   cursor: pointer;
 }
 .ag-band__btn:hover {
-  background-color: rgb(37 99 235 / 0.08);
+  background-color: var(--color-overlay-accent);
 }
 .ag-band__btn:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -446,7 +458,7 @@ th[aria-sort="descending"] .ag-sort__down {
   touch-action: none;
 }
 .ag-rowresizer:hover {
-  background-color: rgb(37 99 235 / 0.55);
+  background-color: var(--color-accent);
 }
 
 .ag-qty {
@@ -488,13 +500,13 @@ th[aria-sort="descending"] .ag-sort__down {
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   color: var(--color-on-ink);
-  background-color: var(--color-ink);
+  background-color: var(--color-primary);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   transform: translateX(-50%);
 }
 .ag-toast--error {
-  background-color: var(--color-danger);
+  background-color: var(--color-danger-solid);
 }
 
 /* ---------- Móvil: la barra de herramientas ocupa todo el ancho ---------- */

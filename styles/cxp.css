@@ -1,0 +1,279 @@
+/* Cuentas por pagar. Reutiliza las clases ag-* (tabla, barra, paginador) y ui-* del sistema de diseño. */
+
+.cxp-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+.cxp-top .ag-head {
+  flex: 1 1 18rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ---------- Resumen (arriba a la derecha) ---------- */
+.cxp-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.cxp-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 10.5rem;
+  padding: 0.625rem 0.875rem;
+  font: inherit;
+  text-align: left;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+button.cxp-kpi {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+button.cxp-kpi:hover {
+  border-color: var(--color-border-strong);
+}
+button.cxp-kpi:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.cxp-kpi.is-active {
+  border-color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+.cxp-kpi__titulo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.cxp-kpi__valor {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.cxp-kpi__cantidad {
+  font-size: 0.75rem;
+  color: var(--color-text-subtle);
+}
+.cxp-kpi--danger .cxp-kpi__valor {
+  color: var(--color-danger);
+}
+.cxp-kpi--success .cxp-kpi__valor {
+  color: var(--color-success);
+}
+
+/* ---------- Pestañas ---------- */
+.cxp-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.cxp-tab {
+  padding: 0.5rem 0.875rem;
+  margin-bottom: -1px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+.cxp-tab:hover {
+  color: var(--color-text);
+}
+.cxp-tab.is-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-ink);
+}
+.cxp-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Filtros y tabla ---------- */
+.cxp-select {
+  flex: 0 1 11rem;
+  width: auto;
+  min-width: 9rem;
+}
+.cxp-leyenda {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.cxp-leyenda__muestra {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0.875rem;
+  background-color: var(--cxp-manual-bg);
+  border: 1px solid var(--color-accent-border);
+  border-radius: 0.2rem;
+}
+:root {
+  --cxp-manual-bg: #dbeafe; /* el azul con que se marcaban a mano en el Excel */
+}
+
+.ag-table.cxp-table {
+  table-layout: auto;
+  width: 100%;
+  min-width: 96rem;
+}
+.cxp-table th,
+.cxp-table td {
+  vertical-align: middle;
+}
+.cxp-th {
+  display: block;
+  padding: 0.625rem 0.75rem;
+}
+.cxp-table td.cxp-num,
+.cxp-table th.cxp-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cxp-table .cxp-col-nombre {
+  min-width: 14rem;
+  font-weight: 600;
+}
+.cxp-table .cxp-col-detalles {
+  min-width: 12rem;
+}
+.cxp-table .cxp-pagar {
+  font-weight: 700;
+}
+.ag-table tbody tr.cxp-row--manual td {
+  background-color: var(--cxp-manual-bg);
+}
+.ag-table tbody tr.cxp-row--manual:hover td {
+  background-color: #bfdbfe;
+}
+
+/* Días de vencimiento: de claro a rojo, como el formato condicional del Excel */
+.cxp-dias--0 { color: var(--color-text-subtle); }
+.cxp-dias--1 { color: var(--color-warning); font-weight: 600; }
+.cxp-dias--2 { color: #b45309; font-weight: 700; }
+.cxp-dias--3 { color: var(--color-danger); font-weight: 700; }
+
+.cxp-acciones {
+  display: flex;
+  gap: 0.375rem;
+}
+
+/* Celda editable al hacer clic */
+.cxp-celda {
+  display: block;
+  width: 100%;
+  min-height: 1.5rem;
+  padding: 0.125rem 0.25rem;
+  font: inherit;
+  text-align: inherit;
+  color: inherit;
+  background: none;
+  border: 1px dashed transparent;
+  border-radius: var(--radius-sm);
+  cursor: text;
+}
+.cxp-celda:hover,
+.cxp-celda:focus-visible {
+  border-color: var(--color-border-strong);
+  outline: none;
+}
+.cxp-celda__vacia {
+  color: var(--color-text-subtle);
+}
+.cxp-celda__input {
+  min-width: 7rem;
+}
+
+/* ---------- Ventana del formulario ---------- */
+.cxp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: start center;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  background-color: rgb(17 24 39 / 0.45);
+}
+.cxp-modal__card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 44rem;
+  padding: 1.25rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.cxp-modal__title {
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
+}
+.cxp-modal__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.cxp-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.cxp-form__ancho,
+.cxp-form__completo {
+  grid-column: span 1;
+}
+.cxp-form__completo {
+  grid-column: 1 / -1;
+}
+@media (max-width: 40rem) {
+  .cxp-form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.cxp-form__pagar {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-h);
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cxp-suggest {
+  position: relative;
+}
+.cxp-suggest__list {
+  top: 100%;
+  left: 0;
+  right: 0;
+  width: auto;
+}
+.cxp-combo__nit {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-subtle);
+}
+
+/* ---------- Selector de aplicación ---------- */
+.cxp-apps__desc {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}

@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { PantallaCentrada } from '@/components/app/PantallaCentrada';
+import { SelectorAplicacion, type Aplicacion } from '@/components/app/SelectorAplicacion';
 import { obtenerContextoOrg } from '@/lib/orgContext';
 import { createClient } from '@/lib/supabase/server';
 import { etiquetaRol } from '@/lib/roles';
@@ -12,9 +13,27 @@ export default async function OrganizacionInicio({ params }: { params: Promise<{
   if (!ctx) notFound();
 
   const base = `/app/${encodeURIComponent(slug)}`;
-  if (ctx.permisos.agotados) redirect(`${base}/agotados`);
-  if (ctx.permisos.pedidos) redirect(`${base}/pedidos`);
-  if (ctx.permisos.items) redirect(`${base}/items`);
+
+  // Aplicaciones a las que tiene acceso. Con más de una elige; con una sola entra directo (como antes).
+  const rutaPedidos = ctx.permisos.agotados
+    ? `${base}/agotados`
+    : ctx.permisos.pedidos
+      ? `${base}/pedidos`
+      : ctx.permisos.items
+        ? `${base}/items`
+        : ctx.permisos.proveedores
+          ? `${base}/proveedores`
+          : null;
+  const rutaCxp = ctx.permisos.cxp ? `${base}/cxp` : ctx.permisos.cxpPagos ? `${base}/cxp-pagados` : null;
+  if (rutaPedidos && rutaCxp) {
+    const aplicaciones: Aplicacion[] = [
+      { clave: 'pedidos', titulo: 'Pedidos', descripcion: 'Agotados, cotizaciones, órdenes de compra, ítems y proveedores', href: rutaPedidos },
+      { clave: 'cxp', titulo: 'Cuentas por pagar', descripcion: 'Cartera por proveedor, vencimientos y pagos', href: rutaCxp },
+    ];
+    return <SelectorAplicacion organizacion={ctx.organizacion.nombre} aplicaciones={aplicaciones} />;
+  }
+  if (rutaPedidos) redirect(rutaPedidos);
+  if (rutaCxp) redirect(rutaCxp);
 
   if (ctx.esAdmin) redirect(`${base}/admin`);
 

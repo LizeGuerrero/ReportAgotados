@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import TabProveedores from '@/components/items/TabProveedores';
 import type { PermisosItems } from '@/components/items/usePermisos';
-import { boton, campo, celda, fecha, idVisible } from '@/components/pedidos/comun';
+import { fecha, idVisible } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface ItemCompleto {
   id_item: number;
@@ -80,8 +81,8 @@ export default function ItemDetalle({ supabase, organizacionId, itemId, permisos
   if (!item) {
     return (
       <div>
-        <button type="button" style={boton} onClick={onVolver}>← Volver</button>
-        <p>{error || 'Cargando…'}</p>
+        <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onVolver}>← Volver</button>
+        <p className="mod-muted">{error || 'Cargando…'}</p>
       </div>
     );
   }
@@ -96,17 +97,17 @@ export default function ItemDetalle({ supabase, organizacionId, itemId, permisos
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-        <button type="button" style={boton} onClick={onVolver}>← Volver</button>
-        <strong style={{ fontSize: 16 }}>
+      <div className="mod-flex mod-gap-3 mod-center mod-mb-3 mod-wrap">
+        <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onVolver}>← Volver</button>
+        <strong className="mod-lg">
           {idVisible(item.id_item, item.provisional, item.codigo_erp)} · {item.nombre_base}
         </strong>
-        {item.provisional && <span style={{ fontSize: 12 }}>(provisional: aún sin código del ERP)</span>}
-        {!item.activo && <span style={{ fontSize: 12, fontWeight: 700 }}>INHABILITADO</span>}
+        {item.provisional && <span className="mod-sub">(provisional: aún sin código del ERP)</span>}
+        {!item.activo && <span className="mod-sub mod-bold">INHABILITADO</span>}
         {permisos.itemsEditar && (
           <button
             type="button"
-            style={boton}
+            className={item.activo ? 'ui-btn ui-btn--sm ui-btn--danger' : 'ui-btn ui-btn--sm ui-btn--primary'}
             onClick={() => {
               if (item.activo && !window.confirm('¿Inhabilitar este ítem? No se borra, puedes habilitarlo después.')) return;
               ejecutar('item_estado', { p_item: itemId, p_activo: !item.activo },
@@ -118,7 +119,7 @@ export default function ItemDetalle({ supabase, organizacionId, itemId, permisos
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '1px solid #000' }}>
+      <div className="mod-tabs">
         {pestanas.map((p) => (
           <button
             key={p.valor}
@@ -129,25 +130,15 @@ export default function ItemDetalle({ supabase, organizacionId, itemId, permisos
               setError('');
             }}
             aria-current={pestana === p.valor}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #000',
-              borderBottom: pestana === p.valor ? '1px solid #fff' : '1px solid #000',
-              marginBottom: -1,
-              background: pestana === p.valor ? '#fff' : '#eee',
-              color: '#000',
-              fontSize: 14,
-              fontWeight: pestana === p.valor ? 700 : 400,
-              cursor: 'pointer',
-            }}
+            className={pestana === p.valor ? 'mod-tab is-active' : 'mod-tab'}
           >
             {p.texto}
           </button>
         ))}
       </div>
 
-      {error && <p style={{ color: '#b00020', fontSize: 13 }}>{error}</p>}
-      {aviso && <p style={{ fontSize: 13 }}>{aviso}</p>}
+      {error && <p className="mod-error mod-text">{error}</p>}
+      {aviso && <p className="mod-text">{aviso}</p>}
 
       {pestana === 'general' && (
         <TabGeneral
@@ -192,13 +183,13 @@ function Campo({
   multilinea?: boolean;
 }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12 }}>
+    <label className="mod-flex mod-col mod-gap-1 mod-sub">
       {etiqueta}
       {multilinea ? (
-        <textarea style={{ ...campo, width: ancho, minHeight: 60 }} value={valor} disabled={deshabilitado}
+        <textarea className="ui-input ui-input--sm" style={{ width: ancho, minHeight: 60 }} value={valor} disabled={deshabilitado}
           onChange={(e) => onCambio(e.target.value)} />
       ) : (
-        <input style={{ ...campo, width: ancho }} value={valor} disabled={deshabilitado}
+        <input className="ui-input ui-input--sm" style={{ width: ancho }} value={valor} disabled={deshabilitado}
           onChange={(e) => onCambio(e.target.value)} />
       )}
     </label>
@@ -245,11 +236,11 @@ function TabGeneral({
   return (
     <div>
       {item.provisional && (
-        <p style={{ fontSize: 12, margin: '0 0 10px' }}>
+        <p className="mod-sub mod-mt-0 mod-mb-3">
           Ítem provisional: aún no tiene código del ERP. Se asigna al vincularlo desde Pedidos.
         </p>
       )}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+      <div className="mod-flex mod-wrap mod-gap-3">
         {CAMPOS_GENERAL.map((c) => (
           <Campo
             key={c.clave}
@@ -265,7 +256,7 @@ function TabGeneral({
       {puedeEditar && (
         <button
           type="button"
-          style={{ ...boton, marginTop: 12 }}
+          className="ui-btn ui-btn--sm mod-mt-3"
           disabled={guardando}
           onClick={async () => {
             setGuardando(true);
@@ -315,18 +306,18 @@ function TabLogistica({
 
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+      <div className="mod-flex mod-wrap mod-gap-3">
         <Campo etiqueta="Peso (kg)" ancho={120} valor={v.peso_kg} deshabilitado={!puedeEditar} onCambio={(x) => setV({ ...v, peso_kg: x })} />
         <Campo etiqueta="Alto (cm)" ancho={120} valor={v.alto_cm} deshabilitado={!puedeEditar} onCambio={(x) => setV({ ...v, alto_cm: x })} />
         <Campo etiqueta="Ancho (cm)" ancho={120} valor={v.ancho_cm} deshabilitado={!puedeEditar} onCambio={(x) => setV({ ...v, ancho_cm: x })} />
         <Campo etiqueta="Largo (cm)" ancho={120} valor={v.largo_cm} deshabilitado={!puedeEditar} onCambio={(x) => setV({ ...v, largo_cm: x })} />
       </div>
-      {volumen !== null && <p style={{ fontSize: 12 }}>Volumen calculado: {volumen.toLocaleString('es-CO', { maximumFractionDigits: 6 })} m³</p>}
-      <div style={{ marginTop: 8 }}>
+      {volumen !== null && <p className="mod-sub">Volumen calculado: {volumen.toLocaleString('es-CO', { maximumFractionDigits: 6 })} m³</p>}
+      <div className="mod-mt-2">
         <Campo etiqueta="Notas de logística" ancho={580} multilinea valor={v.notas} deshabilitado={!puedeEditar} onCambio={(x) => setV({ ...v, notas: x })} />
       </div>
-      {error && <p style={{ color: '#b00020', fontSize: 13 }}>{error}</p>}
-      {puedeEditar && <button type="button" style={{ ...boton, marginTop: 12 }} onClick={guardar}>Guardar logística</button>}
+      {error && <p className="mod-error mod-text">{error}</p>}
+      {puedeEditar && <button type="button" className="ui-btn ui-btn--sm mod-mt-3" onClick={guardar}>Guardar logística</button>}
     </div>
   );
 }
@@ -353,12 +344,12 @@ function TabTributaria({
   return (
     <div>
       <Campo etiqueta="IVA de venta (%)" ancho={120} valor={v} deshabilitado={!puedeEditar} onCambio={setV} />
-      <p style={{ fontSize: 12, maxWidth: 560 }}>
+      <p className="mod-sub" style={{ maxWidth: 560 }}>
         Es el IVA con el que <strong>nosotros vendemos</strong> el ítem (dato del ERP). El IVA de <strong>compra</strong> es
         distinto y depende de cada proveedor: se definirá en Proveedores. Aquí se agregarán más datos tributarios cuando se definan.
       </p>
-      {error && <p style={{ color: '#b00020', fontSize: 13 }}>{error}</p>}
-      {puedeEditar && <button type="button" style={boton} onClick={guardar}>Guardar</button>}
+      {error && <p className="mod-error mod-text">{error}</p>}
+      {puedeEditar && <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={guardar}>Guardar</button>}
     </div>
   );
 }
@@ -409,30 +400,30 @@ function TabHistorial({
     });
   }, [supabase, organizacionId, itemId]);
 
-  if (error) return <p style={{ color: '#b00020', fontSize: 13 }}>{error}</p>;
-  if (!filas) return <p>Cargando…</p>;
-  if (filas.length === 0) return <p style={{ fontSize: 13 }}>Aún no hay cambios registrados (el historial empieza desde esta versión).</p>;
+  if (error) return <p className="mod-error mod-text">{error}</p>;
+  if (!filas) return <p className="mod-muted">Cargando…</p>;
+  if (filas.length === 0) return <p className="mod-text">Aún no hay cambios registrados (el historial empieza desde esta versión).</p>;
 
   return (
-    <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+    <TablaExcel clave="itemdetalle-1" etiqueta="Tabla de proveedores del ítem"><table className="mod-table">
       <thead>
         <tr>
           {['Fecha', 'Usuario', 'Qué', 'Acción', 'Detalle'].map((h) => (
-            <th key={h} style={{ ...celda, background: '#eee', fontWeight: 700 }}>{h}</th>
+            <th key={h}>{h}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {filas.map((e, i) => (
           <tr key={i}>
-            <td style={celda}>{fecha(e.fecha)}</td>
-            <td style={celda}>{e.usuario ?? 'Sistema'}</td>
-            <td style={celda}>{NOMBRE_TABLA[e.tabla] ?? e.tabla}</td>
-            <td style={celda}>{ACCION[e.accion] ?? e.accion}</td>
-            <td style={celda}>{describir(e)}</td>
+            <td>{fecha(e.fecha)}</td>
+            <td>{e.usuario ?? 'Sistema'}</td>
+            <td>{NOMBRE_TABLA[e.tabla] ?? e.tabla}</td>
+            <td>{ACCION[e.accion] ?? e.accion}</td>
+            <td>{describir(e)}</td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></TablaExcel>
   );
 }

@@ -44,7 +44,7 @@ export default function ActualizarPasswordPage() {
   return (
     <main style={{ maxWidth: 380, margin: '60px auto', padding: 24 }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Crea una nueva contraseña</h1>
-      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+      <p style={{ fontSize: 13, color: 'var(--color-text-subtle)', marginBottom: 16 }}>
         Esta reemplaza tu contraseña anterior.
       </p>
 
@@ -68,7 +68,7 @@ export default function ActualizarPasswordPage() {
           minLength={8}
           style={inputStyle}
         />
-        {error && <p style={{ color: '#dc2626', fontSize: 13 }}>{error}</p>}
+        {error && <p style={{ color: 'var(--color-danger)', fontSize: 13 }}>{error}</p>}
         <button type="submit" disabled={cargando} style={submitStyle}>
           {cargando ? 'Guardando...' : 'Guardar nueva contraseña'}
         </button>
@@ -80,7 +80,9 @@ export default function ActualizarPasswordPage() {
 const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   borderRadius: 8,
-  border: '1px solid #d1d5db',
+  border: '1px solid var(--color-border)',
+  background: 'var(--color-input)',
+  color: 'var(--color-text)',
   fontSize: 14,
 };
 
@@ -88,7 +90,7 @@ const submitStyle: React.CSSProperties = {
   padding: '10px 12px',
   borderRadius: 8,
   border: 'none',
-  background: '#111827',
+  background: 'var(--color-primary)',
   color: '#fff',
   cursor: 'pointer',
   fontSize: 14,

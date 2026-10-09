@@ -13,8 +13,9 @@ import PorProveedor from '@/components/pedidos/PorProveedor';
 import Comparativo from '@/components/pedidos/Comparativo';
 import ItemsProvisionales from '@/components/pedidos/ItemsProvisionales';
 import {
-  boton, campo, celda, ESTADOS, idVisible, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type Pedido,
+  ESTADOS, idVisible, InsigniaEstado, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type Pedido,
 } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 type Pestana = 'pedidos' | 'proveedor' | 'comparativo' | 'solicitudes' | 'ordenes' | 'provisionales';
 
@@ -35,24 +36,14 @@ export default function PedidosCompras({ organizacionId }: { organizacionId: str
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '1px solid #000' }}>
+      <div className="mod-tabs">
         {PESTANAS.map((p) => (
           <button
             key={p.valor}
             type="button"
             onClick={() => setPestana(p.valor)}
             aria-current={pestana === p.valor}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #000',
-              borderBottom: pestana === p.valor ? '1px solid #fff' : '1px solid #000',
-              marginBottom: -1,
-              background: pestana === p.valor ? '#fff' : '#eee',
-              color: '#000',
-              fontSize: 14,
-              fontWeight: pestana === p.valor ? 700 : 400,
-              cursor: 'pointer',
-            }}
+            className={pestana === p.valor ? 'mod-tab is-active' : 'mod-tab'}
           >
             {p.texto}
           </button>
@@ -198,7 +189,7 @@ function ListaPedidos({
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div className="mod-toolbar mod-toolbar--top">
         <SelectorLinea
           lineas={lineas}
           valor={linea}
@@ -222,71 +213,74 @@ function ListaPedidos({
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           placeholder="Buscar por ítem, nombre o referencia"
-          style={{ ...campo, minWidth: 300 }}
+          className="ui-input ui-input--sm mod-auto" style={{ minWidth: 300 }}
         />
       </div>
 
-      {error && <p style={{ color: '#000', fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
       {aviso && (
-        <p style={{ fontSize: 13 }}>
+        <p className="mod-text">
           {aviso}{' '}
-          <button type="button" style={boton} onClick={() => setAviso('')}>Entendido</button>
+          <button type="button" className="ui-btn ui-btn--sm" onClick={() => setAviso('')}>Entendido</button>
         </p>
       )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <TablaExcel clave="pedidoscompras-1" etiqueta="Tabla de pedidos"><table className="mod-table">
           <thead>
             <tr>
               {['Item', 'Nombre Base', 'Línea', 'Cant. sugerida', 'Estado', 'Cotizaciones', 'Mejor costo', 'Proveedor elegido', 'Acción'].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filas.map((p) => (
               <tr key={p.item_id}>
-                <td style={celda}>{idVisible(p.item_id, p.provisional, p.codigo)}</td>
-                <td style={celda}>
+                <td>{idVisible(p.item_id, p.provisional, p.codigo)}</td>
+                <td>
                   {p.nombre_base}
                   {p.origen === 'manual' && (
-                    <div style={{ fontSize: 11 }}>
+                    <div className="mod-sub">
                       Iniciado por Compras (sin agotado){p.provisional ? ' · ítem provisional' : ''}
                     </div>
                   )}
                   {p.ultima_orden_numero && (
-                    <div style={{ fontSize: 11 }}>
+                    <div className="mod-sub">
                       Última orden: {textoUltimaOrden(p.ultima_orden_numero, p.ultima_orden_fecha, p.ultima_orden_cantidad)}
                     </div>
                   )}
                 </td>
-                <td style={celda}>{p.linea ?? ''}</td>
-                <td style={celda}>
+                <td>{p.linea ?? ''}</td>
+                <td>
                   {p.cantidad_sugerida ?? ''}
-                  {p.sedes.length > 1 && <div style={{ fontSize: 11 }}>{p.sedes.length} sedes</div>}
+                  {p.sedes.length > 1 && <div className="mod-sub">{p.sedes.length} sedes</div>}
                 </td>
-                <td style={celda}>{ESTADOS[p.estado] ?? p.estado}</td>
-                <td style={celda}>
+                <td><InsigniaEstado estado={p.estado} /></td>
+                <td>
                   {p.cotizaciones_esperadas > 0 ? `${p.cotizaciones_recibidas}/${p.cotizaciones_esperadas}` : '—'}
                 </td>
-                <td style={celda}>
+                <td>
                   {p.mejor_costo !== null ? (
                     <>
                       {pesos(p.mejor_costo)}
-                      <div style={{ fontSize: 11 }}>{p.mejor_proveedor}</div>
+                      <div className="mod-sub">{p.mejor_proveedor}</div>
                     </>
                   ) : (
                     '—'
                   )}
                 </td>
-                <td style={celda}>{p.proveedor_elegido ?? '—'}</td>
-                <td style={celda}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button type="button" style={boton} onClick={() => setDetalle(p)}>
+                <td>{p.proveedor_elegido ?? '—'}</td>
+                <td>
+                  <div className="mod-flex mod-gap-2">
+                    <button
+                      type="button"
+                      className={['por_cotizar', 'en_cotizacion'].includes(p.estado) ? 'ui-btn ui-btn--sm ui-btn--primary' : 'ui-btn ui-btn--sm ui-btn--soft'}
+                      onClick={() => setDetalle(p)}
+                    >
                       {['por_cotizar', 'en_cotizacion'].includes(p.estado) ? 'Cotizar' : 'Ver'}
                     </button>
                     {p.estado === 'agotado_proveedor' && (
-                      <button type="button" style={boton} onClick={() => reabrir(p)}>Volver a cotizar</button>
+                      <button type="button" className="ui-btn ui-btn--sm" onClick={() => reabrir(p)}>Volver a cotizar</button>
                     )}
                   </div>
                 </td>
@@ -294,17 +288,16 @@ function ListaPedidos({
             ))}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td style={celda} colSpan={9}>No hay ítems en gestión</td>
+                <td colSpan={9}>No hay ítems en gestión</td>
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </table></TablaExcel>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center', fontSize: 13 }}>
-        <button disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
+      <div className="mod-pager">
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
         <span>Página {pagina + 1} de {paginas} ({total} ítems)</span>
-        <button disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
       </div>
     </div>
   );

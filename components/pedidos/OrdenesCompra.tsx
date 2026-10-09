@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useTiempoReal } from '@/components/useTiempoReal';
-import { boton, celda, fecha, pesos, PanelTexto, TABLAS_PEDIDOS, textoCajas } from '@/components/pedidos/comun';
+import { fecha, pesos, PanelTexto, TABLAS_PEDIDOS, textoCajas } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface LineaPorGenerar {
   cotizacion_id: string;
@@ -23,6 +24,7 @@ interface LineaPorGenerar {
 interface PorGenerar {
   proveedor_id: number;
   proveedor: string;
+  documento: string;
   items: number;
   total_con_iva: number;
   lineas: LineaPorGenerar[];
@@ -44,6 +46,7 @@ interface Orden {
   numero_texto: string;
   proveedor_id: number;
   proveedor: string;
+  documento: string;
   sede: string | null;
   fecha: string;
   total_oc: number | null;
@@ -114,102 +117,98 @@ export default function OrdenesCompra({
 
   return (
     <div>
-      {error && <p style={{ fontSize: 13 }}>Error: {error}</p>}
+      {error && <p className="mod-text">Error: {error}</p>}
 
       {texto && (
         <PanelTexto titulo={texto.titulo} texto={texto.texto} onCerrar={() => setTexto(null)} />
       )}
 
-      <h3 style={{ fontSize: 15, margin: '0 0 8px' }}>Por generar (ganadores elegidos, agrupados por proveedor)</h3>
+      <h3 className="mod-h3 mod-mt-0 mod-mb-2">Por generar (ganadores elegidos, agrupados por proveedor)</h3>
       {porGenerar.length === 0 && (
-        <p style={{ fontSize: 13 }}>No hay ítems ganadores pendientes. Elige un ganador en el detalle de cotización de cada ítem.</p>
+        <p className="mod-text">No hay ítems ganadores pendientes. Elige un ganador en el detalle de cotización de cada ítem.</p>
       )}
       {porGenerar.map((p) => (
-        <div key={p.proveedor_id} style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 4 }}>
-            <strong style={{ fontSize: 14 }}>{p.proveedor} (NIT {p.proveedor_id})</strong>
-            <span style={{ fontSize: 13 }}>{p.items} ítem(s) · Total con IVA {pesos(p.total_con_iva)}</span>
+        <div key={p.proveedor_id} className="mod-mb-4">
+          <div className="mod-flex mod-gap-3 mod-center mod-mb-1">
+            <strong className="mod-md">{p.proveedor} ({p.documento})</strong>
+            <span className="mod-text">{p.items} ítem(s) · Total con IVA {pesos(p.total_con_iva)}</span>
             <button
               type="button"
-              style={{ ...boton, fontWeight: 600 }}
+              className="ui-btn ui-btn--sm mod-semibold"
               disabled={generando === p.proveedor_id}
               onClick={() => generar(p)}
             >
               Generar orden de compra
             </button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <TablaExcel clave="ordenescompra-1" etiqueta="Tabla de órdenes de compra"><table className="mod-table">
               <thead>
                 <tr>
                   {['Item', 'Nombre Base', 'Línea', 'Referencia', 'Cantidad', 'Cajas', 'Costo unit.', 'Costo con IVA', 'Flete'].map((h) => (
-                    <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {p.lineas.map((l) => (
                   <tr key={l.cotizacion_id}>
-                    <td style={celda}>{l.codigo ?? l.item_id}</td>
-                    <td style={celda}>{l.nombre_base}</td>
-                    <td style={celda}>{l.linea ?? ''}</td>
-                    <td style={celda}>{l.referencia ?? ''}</td>
-                    <td style={celda}>{l.cantidad}</td>
-                    <td style={celda}>{textoCajas(l.cantidad, l.unidades_por_caja)}</td>
-                    <td style={celda}>{pesos(l.costo_unitario)}</td>
-                    <td style={celda}>{pesos(l.costo_con_iva)}</td>
-                    <td style={celda}>{pesos(l.flete)}</td>
+                    <td>{l.codigo ?? l.item_id}</td>
+                    <td>{l.nombre_base}</td>
+                    <td>{l.linea ?? ''}</td>
+                    <td>{l.referencia ?? ''}</td>
+                    <td>{l.cantidad}</td>
+                    <td>{textoCajas(l.cantidad, l.unidades_por_caja)}</td>
+                    <td>{pesos(l.costo_unitario)}</td>
+                    <td>{pesos(l.costo_con_iva)}</td>
+                    <td>{pesos(l.flete)}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+            </table></TablaExcel>
         </div>
       ))}
 
-      <h3 style={{ fontSize: 15, margin: '24px 0 8px' }}>Historial de órdenes</h3>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <h3 className="mod-h3 mod-mt-5 mod-mb-2">Historial de órdenes</h3>
+      <TablaExcel clave="ordenescompra-2" etiqueta="Tabla de órdenes de compra"><table className="mod-table">
           <thead>
             <tr>
               {['N°', 'Proveedor', 'Sede', 'Fecha', 'Total con IVA', 'Creó', 'Ítems', 'Acción'].map((h) => (
-                <th key={h} style={{ ...celda, fontWeight: 600 }}>{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {ordenes.map((o) => (
               <tr key={o.id}>
-                <td style={celda}>{o.numero_texto}</td>
-                <td style={celda}>{o.proveedor}</td>
-                <td style={celda}>{o.sede ?? ''}</td>
-                <td style={celda}>{fecha(o.fecha)}</td>
-                <td style={celda}>{pesos(o.total_oc)}</td>
-                <td style={celda}>{o.creado_por ?? ''}</td>
-                <td style={celda}>
+                <td>{o.numero_texto}</td>
+                <td>{o.proveedor}</td>
+                <td>{o.sede ?? ''}</td>
+                <td>{fecha(o.fecha)}</td>
+                <td>{pesos(o.total_oc)}</td>
+                <td>{o.creado_por ?? ''}</td>
+                <td>
                   <details>
-                    <summary style={{ cursor: 'pointer' }}>{o.items.length} ítem(s)</summary>
+                    <summary className="mod-pointer">{o.items.length} ítem(s)</summary>
                     {o.items.map((l) => (
-                      <div key={l.item_id} style={{ fontSize: 12 }}>
+                      <div key={l.item_id} className="mod-sub">
                         {l.codigo ?? l.item_id} · {l.nombre_base} · {l.cantidad}
                         {l.unidades_por_caja ? ` (${textoCajas(l.cantidad, l.unidades_por_caja)})` : ''} · {pesos(l.costo_unitario)}
                       </div>
                     ))}
                   </details>
                 </td>
-                <td style={celda}>
-                  <button type="button" style={boton} onClick={() => verTexto(o.id, o.numero_texto, o.proveedor)}>
+                <td>
+                  <button type="button" className="ui-btn ui-btn--sm ui-btn--soft" onClick={() => verTexto(o.id, o.numero_texto, o.proveedor)}>
                     Ver / copiar
                   </button>
                 </td>
               </tr>
             ))}
             {ordenes.length === 0 && (
-              <tr><td style={celda} colSpan={8}>Aún no hay órdenes de compra</td></tr>
+              <tr><td colSpan={8}>Aún no hay órdenes de compra</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
+        </table></TablaExcel>
     </div>
   );
 }

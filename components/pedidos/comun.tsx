@@ -3,32 +3,6 @@
 import { useState } from 'react';
 import type { TablaTiempoReal } from '@/components/useTiempoReal';
 
-export const celda: React.CSSProperties = {
-  border: '1px solid #000',
-  padding: '4px 8px',
-  fontSize: 13,
-  color: '#000',
-  verticalAlign: 'top',
-  textAlign: 'left',
-};
-
-export const campo: React.CSSProperties = {
-  padding: 6,
-  border: '1px solid #000',
-  color: '#000',
-  background: '#fff',
-  fontSize: 14,
-};
-
-export const boton: React.CSSProperties = {
-  padding: '4px 10px',
-  border: '1px solid #000',
-  background: '#fff',
-  color: '#000',
-  fontSize: 13,
-  cursor: 'pointer',
-};
-
 export function fecha(valor: string | null) {
   if (!valor) return '';
   return new Date(valor).toLocaleString('es-CO', {
@@ -58,14 +32,29 @@ export async function copiar(texto: string): Promise<boolean> {
 }
 
 export const ESTADOS: Record<string, string> = {
-  por_cotizar: '⚪ Por cotizar',
-  en_cotizacion: '🟡 En cotización',
-  cotizado: '🟢 Cotizado',
-  pedido_solicitado: '✅ Pedido solicitado',
-  agotado_proveedor: '🔴 Agotado en proveedor',
-  repartir_sedes: '🔁 Repartir entre sedes',
-  no_se_pide: '🚫 No se pide',
+  por_cotizar: 'Por cotizar',
+  en_cotizacion: 'En cotización',
+  cotizado: 'Cotizado',
+  pedido_solicitado: 'Pedido solicitado',
+  agotado_proveedor: 'Agotado en proveedor',
+  repartir_sedes: 'Repartir entre sedes',
+  no_se_pide: 'No se pide',
 };
+
+/** Color de cada estado: el mismo criterio de las insignias de Agotados (verde = hecho, rojo = agotado, ámbar = en proceso o no se pide). */
+const INSIGNIA_ESTADO: Record<string, string> = {
+  por_cotizar: '',
+  en_cotizacion: 'ui-badge--warning',
+  cotizado: 'ui-badge--success',
+  pedido_solicitado: 'ui-badge--success',
+  agotado_proveedor: 'ui-badge--danger',
+  repartir_sedes: 'ui-badge--violet',
+  no_se_pide: 'ui-badge--warning',
+};
+
+export function InsigniaEstado({ estado }: { estado: string }) {
+  return <span className={`ui-badge ${INSIGNIA_ESTADO[estado] ?? ''}`.trim()}>{ESTADOS[estado] ?? estado}</span>;
+}
 
 /** Tablas que, al cambiar, deben refrescar las pantallas de Pedidos (ver useTiempoReal). */
 export const TABLAS_PEDIDOS: readonly TablaTiempoReal[] = [
@@ -86,6 +75,8 @@ export const RESPUESTAS: { valor: string; texto: string }[] = [
 export interface ProveedorItem {
   proveedor_id: number;
   proveedor: string;
+  /** Tipo y número de documento, p. ej. "NIT 900123456". */
+  documento: string;
   codigo: string | null;
   precio_erp: number | null;
   dias: number | null;
@@ -136,6 +127,7 @@ export interface Pedido {
 export interface ProveedorLista {
   id: number;
   nombre: string;
+  documento: string;
   items_pendientes: number;
   solicitudes_abiertas: number;
   items_total: number;
@@ -191,18 +183,18 @@ export function PanelTexto({
   }
 
   return (
-    <div style={{ border: '1px solid #000', padding: 12, margin: '12px 0' }}>
-      <div style={{ fontWeight: 600, marginBottom: 6 }}>{titulo}</div>
+    <div className="mod-card mod-mt-3 mod-mb-3">
+      <div className="mod-semibold mod-mb-2">{titulo}</div>
       <textarea
         readOnly
         value={texto}
         rows={Math.min(20, texto.split('\n').length + 1)}
-        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #000', padding: 6, fontFamily: 'monospace', fontSize: 13 }}
+        className="ui-input mod-mono"
       />
-      <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
-        <button type="button" style={boton} onClick={alCopiar}>Copiar</button>
-        <button type="button" style={boton} onClick={onCerrar}>Cerrar</button>
-        {aviso && <span style={{ fontSize: 13 }}>{aviso}</span>}
+      <div className="mod-flex mod-gap-2 mod-mt-2 mod-center">
+        <button type="button" className="ui-btn ui-btn--sm" onClick={alCopiar}>Copiar</button>
+        <button type="button" className="ui-btn ui-btn--sm" onClick={onCerrar}>Cerrar</button>
+        {aviso && <span className="mod-text">{aviso}</span>}
       </div>
     </div>
   );

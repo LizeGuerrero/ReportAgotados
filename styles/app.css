@@ -8,6 +8,7 @@
   color: var(--color-text);
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-sm);
 }
 .app-header__inner {
   display: grid;
@@ -83,7 +84,7 @@
 }
 .app-nav__link[aria-current="page"] {
   color: var(--color-text);
-  border-bottom-color: var(--color-ink);
+  border-bottom-color: var(--color-accent);
 }
 .app-nav__link:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -102,6 +103,32 @@
   align-items: center;
   gap: 0.625rem;
   min-width: 0;
+}
+.app-theme {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  padding: 0;
+  color: var(--color-text-muted);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.app-theme:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+.app-theme:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.app-theme svg {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 .app-user form {
   margin: 0;

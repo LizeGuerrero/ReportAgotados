@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PermisosItems } from '@/components/items/usePermisos';
-import { boton, campo, celda } from '@/components/pedidos/comun';
+import {  } from '@/components/pedidos/comun';
+import TablaExcel from '@/components/TablaExcel';
 
 interface Relacion {
   id: string;
   proveedor_id: number;
   proveedor: string;
+  documento: string;
   variante_id: string | null;
   codigo_proveedor: string | null;
   nombre_producto_proveedor: string | null;
@@ -23,6 +25,8 @@ interface Relacion {
 interface ProveedorOpcion {
   id: number;
   nombre: string;
+  tipo_documento: string;
+  numero_documento: string;
 }
 
 interface Formulario {
@@ -77,7 +81,7 @@ export default function TabProveedores({
     cargar();
     supabase
       .from('proveedores')
-      .select('id, nombre')
+      .select('id, nombre, tipo_documento, numero_documento')
       .eq('organizacion_id', organizacionId)
       .order('nombre')
       .then(({ data }) => setProveedores((data ?? []) as ProveedorOpcion[]));
@@ -145,78 +149,78 @@ export default function TabProveedores({
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10 }}>
+      <div className="mod-flex mod-gap-3 mod-center mod-mb-3">
         {permisos.provCrear && !form && (
-          <button type="button" style={boton} onClick={() => { setAviso(''); setAdvertencias(null); setForm({ ...FORM_VACIO }); }}>
+          <button type="button" className="ui-btn ui-btn--sm" onClick={() => { setAviso(''); setAdvertencias(null); setForm({ ...FORM_VACIO }); }}>
             + Agregar proveedor / referencia
           </button>
         )}
-        <span style={{ fontSize: 12 }}>
+        <span className="mod-sub">
           Un proveedor puede tener varias referencias para este ítem: agrégalas como filas separadas.
         </span>
       </div>
 
-      {error && <p style={{ color: '#b00020', fontSize: 13 }}>{error}</p>}
-      {aviso && <p style={{ fontSize: 13 }}>{aviso}</p>}
+      {error && <p className="mod-error mod-text">{error}</p>}
+      {aviso && <p className="mod-text">{aviso}</p>}
 
       {form && (
-        <div style={{ border: '1px solid #000', padding: 12, marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>{form.id ? 'Editar relación' : 'Nueva relación'}</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <select style={{ ...campo, minWidth: 240 }} value={form.proveedor_id} onChange={(e) => set('proveedor_id', e.target.value)}>
+        <div className="mod-card mod-mb-3">
+          <div className="mod-semibold mod-mb-2">{form.id ? 'Editar relación' : 'Nueva relación'}</div>
+          <div className="mod-flex mod-wrap mod-gap-2">
+            <select className="ui-input ui-input--sm mod-auto" style={{ minWidth: 240 }} value={form.proveedor_id} onChange={(e) => set('proveedor_id', e.target.value)}>
               <option value="">Proveedor *</option>
               {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre} ({p.id})</option>
+                <option key={p.id} value={p.id}>{p.nombre} ({p.tipo_documento} {p.numero_documento})</option>
               ))}
             </select>
-            <input style={{ ...campo, width: 170 }} placeholder="Referencia del proveedor" value={form.codigo_proveedor}
+            <input className="ui-input ui-input--sm" style={{ width: 170 }} placeholder="Referencia del proveedor" value={form.codigo_proveedor}
               onChange={(e) => set('codigo_proveedor', e.target.value)} />
-            <input style={{ ...campo, width: 320 }} placeholder="Nombre según el proveedor" value={form.nombre_producto_proveedor}
+            <input className="ui-input ui-input--sm" style={{ width: 320 }} placeholder="Nombre según el proveedor" value={form.nombre_producto_proveedor}
               onChange={(e) => set('nombre_producto_proveedor', e.target.value)} />
-            <input style={{ ...campo, width: 110 }} placeholder="Und/caja" value={form.unidades_por_caja}
+            <input className="ui-input ui-input--sm" style={{ width: 110 }} placeholder="Und/caja" value={form.unidades_por_caja}
               onChange={(e) => set('unidades_por_caja', e.target.value)} />
-            <input style={{ ...campo, width: 140 }} placeholder="Costo sin IVA (ERP)" value={form.precio_unitario}
+            <input className="ui-input ui-input--sm" style={{ width: 140 }} placeholder="Costo sin IVA (ERP)" value={form.precio_unitario}
               onChange={(e) => set('precio_unitario', e.target.value)} />
-            <input style={{ ...campo, width: 110 }} placeholder="Días entrega" value={form.tiempo_entrega_dias}
+            <input className="ui-input ui-input--sm" style={{ width: 110 }} placeholder="Días entrega" value={form.tiempo_entrega_dias}
               onChange={(e) => set('tiempo_entrega_dias', e.target.value)} />
-            <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <label className="mod-text mod-flex mod-center mod-gap-1">
               <input type="checkbox" checked={form.proveedor_preferido} onChange={(e) => set('proveedor_preferido', e.target.checked)} />
               Preferido
             </label>
-            <input style={{ ...campo, width: 320 }} placeholder="Notas" value={form.notas} onChange={(e) => set('notas', e.target.value)} />
+            <input className="ui-input ui-input--sm" style={{ width: 320 }} placeholder="Notas" value={form.notas} onChange={(e) => set('notas', e.target.value)} />
           </div>
 
           {advertencias && (
-            <div style={{ border: '1px solid #000', background: '#fff8dc', padding: 10, marginTop: 10, fontSize: 13 }}>
+            <div className="mod-note mod-mt-3 mod-text">
               <strong>Revisa antes de guardar:</strong>
-              <ul style={{ margin: '6px 0 8px 18px', padding: 0 }}>
+              <ul className="mod-list">
                 {advertencias.map((a, i) => <li key={i}>{a}</li>)}
               </ul>
-              <button type="button" style={boton} disabled={guardando} onClick={() => guardar(true)}>Guardar de todas formas</button>{' '}
-              <button type="button" style={boton} onClick={() => setAdvertencias(null)}>Volver a corregir</button>
+              <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={guardando} onClick={() => guardar(true)}>Guardar de todas formas</button>{' '}
+              <button type="button" className="ui-btn ui-btn--sm" onClick={() => setAdvertencias(null)}>Volver a corregir</button>
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <div className="mod-flex mod-gap-2 mod-mt-3">
             {!advertencias && (
-              <button type="button" style={boton} disabled={guardando} onClick={() => guardar(false)}>
+              <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={guardando} onClick={() => guardar(false)}>
                 {guardando ? 'Guardando…' : 'Guardar'}
               </button>
             )}
-            <button type="button" style={boton} onClick={() => { setForm(null); setAdvertencias(null); setError(''); }}>Cancelar</button>
+            <button type="button" className="ui-btn ui-btn--sm" onClick={() => { setForm(null); setAdvertencias(null); setError(''); }}>Cancelar</button>
           </div>
         </div>
       )}
 
       {proveedores.length === 0 && (
-        <p style={{ fontSize: 13 }}>No hay proveedores registrados todavía; sin ellos no se puede crear la relación.</p>
+        <p className="mod-text">No hay proveedores registrados todavía; sin ellos no se puede crear la relación.</p>
       )}
 
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <TablaExcel clave="tabproveedores-1" etiqueta="Tabla de proveedores del ítem"><table className="mod-table">
         <thead>
           <tr>
-            {['Proveedor', 'NIT', 'Referencia', 'Nombre según proveedor', 'Und/caja', 'Costo ERP', 'Días', 'Variante', 'Pref.', 'Avisos', ''].map((h) => (
-              <th key={h} style={{ ...celda, background: '#eee', fontWeight: 700 }}>{h}</th>
+            {['Proveedor', 'Documento', 'Referencia', 'Nombre según proveedor', 'Und/caja', 'Costo ERP', 'Días', 'Variante', 'Pref.', 'Avisos', ''].map((h) => (
+              <th key={h}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -228,28 +232,28 @@ export default function TabProveedores({
             if (!r.codigo_proveedor && !r.nombre_producto_proveedor) avisos.push('Sin referencia ni nombre');
             return (
               <tr key={r.id}>
-                <td style={celda}>{r.proveedor}</td>
-                <td style={celda}>{r.proveedor_id}</td>
-                <td style={celda}>{r.codigo_proveedor ?? ''}</td>
-                <td style={celda}>{r.nombre_producto_proveedor ?? ''}</td>
-                <td style={celda}>{r.unidades_por_caja ?? ''}</td>
-                <td style={celda}>{r.precio_unitario ?? ''}</td>
-                <td style={celda}>{r.tiempo_entrega_dias ?? ''}</td>
-                <td style={celda}>{r.variante_id ?? ''}</td>
-                <td style={celda}>{r.proveedor_preferido ? '★' : ''}</td>
-                <td style={{ ...celda, fontSize: 12 }}>{avisos.map((a, i) => <div key={i}>⚠ {a}</div>)}</td>
-                <td style={{ ...celda, whiteSpace: 'nowrap' }}>
-                  {permisos.provEditar && <button type="button" style={boton} onClick={() => editar(r)}>Editar</button>}{' '}
-                  {permisos.provEliminar && <button type="button" style={boton} onClick={() => eliminar(r)}>Eliminar</button>}
+                <td>{r.proveedor}</td>
+                <td>{r.documento}</td>
+                <td>{r.codigo_proveedor ?? ''}</td>
+                <td>{r.nombre_producto_proveedor ?? ''}</td>
+                <td>{r.unidades_por_caja ?? ''}</td>
+                <td>{r.precio_unitario ?? ''}</td>
+                <td>{r.tiempo_entrega_dias ?? ''}</td>
+                <td>{r.variante_id ?? ''}</td>
+                <td className="mod-star">{r.proveedor_preferido ? '★' : ''}</td>
+                <td className="mod-sub">{avisos.map((a, i) => <div key={i} className="mod-warn">⚠ {a}</div>)}</td>
+                <td className="mod-nowrap">
+                  {permisos.provEditar && <button type="button" className="ui-btn ui-btn--sm ui-btn--soft" onClick={() => editar(r)}>Editar</button>}{' '}
+                  {permisos.provEliminar && <button type="button" className="ui-btn ui-btn--sm ui-btn--danger" onClick={() => eliminar(r)}>Eliminar</button>}
                 </td>
               </tr>
             );
           })}
           {filas.length === 0 && (
-            <tr><td style={celda} colSpan={11}>Este ítem aún no tiene proveedores relacionados.</td></tr>
+            <tr><td colSpan={11}>Este ítem aún no tiene proveedores relacionados.</td></tr>
           )}
         </tbody>
-      </table>
+      </table></TablaExcel>
     </div>
   );
 }
