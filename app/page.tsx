@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { obtenerContextoOrg } from '@/lib/orgContext';
+import { tieneAccesoCxp } from '@/lib/cxpRutas';
 import { PantallaCentrada } from '@/components/app/PantallaCentrada';
 import { ChevronRightIcon } from '@/components/ui/icons';
 
@@ -78,7 +79,7 @@ export default async function HomePage() {
     const base = `/app/${encodeURIComponent(slug)}`;
     // Con acceso a Cuentas por pagar, la página de la organización decide: selector (si también
     // tiene Pedidos) o entrada directa a CXP. Sin CXP, nada cambia.
-    if (ctx?.permisos.cxp || ctx?.permisos.cxpPagos) redirect(base);
+    if (ctx && tieneAccesoCxp(ctx.permisos)) redirect(base);
     if (ctx?.permisos.agotados) redirect(`${base}/agotados`);
     if (ctx?.permisos.pedidos) redirect(`${base}/pedidos`);
     // Sin módulos (Predeterminado) o solo administración: la página de la organización lo resuelve.

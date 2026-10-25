@@ -22,6 +22,13 @@ export interface FilaCxp {
   estado: 'pendiente' | 'pagado';
   fecha_pago: string | null;
   pagado_por: string | null;
+  detalle_erp: string | null;
+  regla_id: string | null;
+  regla_tipo: 'documento' | 'patron' | null;
+  contexto: string | null;
+  nota_regla: string | null;
+  /** Documento del ERP que no vino en la última carga. */
+  ausente: boolean;
   total: number;
 }
 
@@ -29,14 +36,50 @@ export interface TotalesCxp {
   suma_total: number;
   suma_vencido: number;
   suma_por_vencer: number;
+  suma_1_30: number;
+  suma_31_60: number;
+  suma_61_90: number;
+  suma_mas_90: number;
   n_total: number;
   n_vencido: number;
   n_por_vencer: number;
+  n_1_30: number;
+  n_31_60: number;
+  n_61_90: number;
+  n_mas_90: number;
 }
 
 export const TOTALES_VACIOS: TotalesCxp = {
-  suma_total: 0, suma_vencido: 0, suma_por_vencer: 0, n_total: 0, n_vencido: 0, n_por_vencer: 0,
+  suma_total: 0, suma_vencido: 0, suma_por_vencer: 0,
+  suma_1_30: 0, suma_31_60: 0, suma_61_90: 0, suma_mas_90: 0,
+  n_total: 0, n_vencido: 0, n_por_vencer: 0, n_1_30: 0, n_31_60: 0, n_61_90: 0, n_mas_90: 0,
 };
+
+export interface UltimaCarga {
+  fecha: string;
+  usuario: string | null;
+  archivo: string | null;
+  filas: number;
+  ausentes: number;
+}
+
+/** Pareja (pendiente manual, documento del ERP) que probablemente son lo mismo. */
+export interface CruceSugerido {
+  manual_id: string;
+  manual_nombre: string;
+  manual_docto: string | null;
+  manual_total: number;
+  manual_vcto: string | null;
+  manual_estado: 'pendiente' | 'pagado';
+  erp_id: string;
+  erp_nombre: string;
+  erp_documento: string;
+  erp_docto: string | null;
+  erp_total: number;
+  erp_vcto: string | null;
+  motivo: string;
+  puntaje: number;
+}
 
 export interface ProveedorFiltro {
   tercero: string | null;
@@ -50,6 +93,9 @@ export interface SugerenciaTercero {
   cond_pago: string | null;
   fuente: 'cartera' | 'proveedores';
 }
+
+/** Notas para contabilidad con las que se marca una exclusión (se puede escribir otra). */
+export const CONTEXTOS = ['DE EQUIPO CONTAB', 'CRUZAR', 'REVISAR', 'ELIMINAR'];
 
 /** Condiciones de pago con el mismo texto que usa el ERP, y sus días de crédito. */
 export const CONDICIONES_PAGO: { texto: string; dias: number }[] = [

@@ -15,6 +15,12 @@ export interface ContextoOrg {
     cxp: boolean;
     /** Cuentas por pagar: documentos pagados. */
     cxpPagos: boolean;
+    /** Cuentas por pagar: reglas de exclusión (REC NO REV). */
+    cxpReglas: boolean;
+    /** Cuentas por pagar: cargar archivos del ERP. */
+    cxpImportar: boolean;
+    /** Cuentas por pagar: configurar el mensaje para el proveedor. */
+    cxpMensajes: boolean;
   };
   /** Administrador activo de esta organización (rol "admin"). */
   esAdmin: boolean;
@@ -46,7 +52,7 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
       p_accion: 'ver',
     });
 
-  const [perfil, agotados, pedidos, items, proveedores, cxp, cxpPagos, admin] = await Promise.all([
+  const [perfil, agotados, pedidos, items, proveedores, cxp, cxpPagos, cxpReglas, cxpImportar, cxpMensajes, admin] = await Promise.all([
     supabase.from('profiles').select('nombres, apellidos, username').eq('id', user.id).maybeSingle(),
     permiso('reporte_agotados'),
     permiso('pedidos'),
@@ -54,6 +60,9 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
     permiso('Proveedores'),
     permiso('cxp'),
     permiso('cxp_pagos'),
+    permiso('cxp_reglas'),
+    permiso('cxp_importar'),
+    permiso('cxp_mensajes'),
     supabase.rpc('es_admin_org', { p_org: organizacion.id }),
   ]);
 
@@ -75,6 +84,9 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
       proveedores: proveedores.data === true,
       cxp: cxp.data === true,
       cxpPagos: cxpPagos.data === true,
+      cxpReglas: cxpReglas.data === true,
+      cxpImportar: cxpImportar.data === true,
+      cxpMensajes: cxpMensajes.data === true,
     },
     esAdmin: admin.data === true,
   };

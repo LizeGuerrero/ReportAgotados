@@ -3,19 +3,23 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Tablas por las que se puede escuchar cambios. Todas deben estar en la publicación
- * `supabase_realtime` (ver migración 01_migracion_pedidos_v1.sql).
+ * `supabase_realtime` (ver migración 01_migracion_pedidos_v1.sql y sql/migracion_pedidos_mesa_compra.sql).
  */
 export type TablaTiempoReal =
   | 'agotados'
   | 'solicitudes_cotizacion'
   | 'ordenes_compra'
   | 'solicitud_items'
-  | 'cotizacion_precios';
+  | 'cotizacion_precios'
+  | 'compras'
+  | 'compra_lineas'
+  | 'compra_ofertas'
+  | 'compra_asignaciones';
 
 // Estas tienen organizacion_id y se filtran en el propio canal. solicitud_items y
 // cotizacion_precios no lo tienen: Realtime solo entrega las filas que el usuario puede
 // leer según RLS, así que igualmente solo llegan las de su organización.
-const CON_ORGANIZACION = new Set<TablaTiempoReal>(['agotados', 'solicitudes_cotizacion', 'ordenes_compra']);
+const CON_ORGANIZACION = new Set<TablaTiempoReal>(['agotados', 'solicitudes_cotizacion', 'ordenes_compra', 'compras']);
 
 /**
  * Vuelve a llamar `recargar` cada vez que cambia alguna de las `tablas` (otra pestaña, otro

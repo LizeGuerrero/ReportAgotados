@@ -1,0 +1,110 @@
+/*
+ * Pedidos · mesa de compra. Complementa modulos.css (mod-*) y ui.css (ui-*) con lo propio de la
+ * mesa: ventana modal, matriz de ofertas y tarjetas de decisión. Solo usa variables de tokens.css,
+ * así que el tema claro/oscuro se aplica solo.
+ */
+.pm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: start center;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  background-color: rgb(17 24 39 / 0.45);
+}
+.pm-modal__card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 44rem;
+  padding: 1.25rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.pm-modal__card--ancha { max-width: 64rem; }
+.pm-modal__title { margin: 0 0 0.5rem; font-size: 1.125rem; }
+.pm-modal__acciones { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+
+.pm-guia {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;
+  padding: 0.625rem 0.875rem; margin: 0 0 0.75rem;
+  background-color: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--radius-md);
+}
+.pm-etapas { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0.375rem 0 0; }
+.pm-etapa { padding: 0.125rem 0.625rem; font-size: 0.8125rem; border-radius: 999px;
+  color: var(--color-text-muted); background-color: var(--color-surface-muted);
+  border: 1px solid var(--color-border-subtle); }
+.pm-etapa.is-actual { color: var(--color-on-ink); background-color: var(--color-primary); border-color: var(--color-primary); }
+
+/* Matriz de ofertas */
+.pm-matriz { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 0.875rem; }
+.pm-matriz th, .pm-matriz td { padding: 0.5rem 0.625rem; vertical-align: top;
+  border-bottom: 1px solid var(--color-border-subtle); text-align: left; }
+.pm-matriz thead th { position: sticky; top: 0; z-index: 1; background-color: var(--color-table-head); }
+.pm-matriz td.pm-prod { min-width: 14rem; max-width: 20rem; }
+.pm-celda { min-width: 9rem; cursor: pointer; border-left: 1px solid var(--color-border-subtle); }
+.pm-celda:hover { background-color: var(--color-surface-hover); }
+.pm-celda.is-asignada { background-color: var(--color-accent-soft); box-shadow: inset 0 0 0 2px var(--color-accent); }
+.pm-celda.is-mejor .pm-precio::after { content: ' ★'; color: var(--color-accent); }
+.pm-celda.is-nodisp { color: var(--color-text-subtle); cursor: default; }
+.pm-celda.is-ordenada { cursor: default; opacity: 0.75; }
+.pm-precio { font-weight: 600; font-variant-numeric: tabular-nums; }
+.pm-chico { display: block; font-size: 0.75rem; color: var(--color-text-subtle); }
+.pm-celda-acc { display: flex; gap: 0.25rem; margin-top: 0.25rem; }
+.pm-prov-cab { display: flex; flex-direction: column; gap: 0.25rem; min-width: 9rem; }
+.pm-prov-cab .ui-btn { white-space: nowrap; }
+
+.pm-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
+.pm-prov-card { padding: 0.75rem; background-color: var(--color-surface);
+  border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
+.pm-prov-card.is-bloqueo { border-color: var(--color-danger, #b91c1c); }
+.pm-fila { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.125rem 0; }
+.pm-total { font-weight: 700; border-top: 1px solid var(--color-border-subtle); margin-top: 0.25rem; padding-top: 0.375rem; }
+.pm-aviso { margin: 0.25rem 0 0; font-size: 0.8125rem; color: var(--color-text-muted); }
+.pm-aviso.is-bloqueo { color: var(--color-danger, #b91c1c); font-weight: 600; }
+.pm-form-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pm-lista { max-height: 22rem; overflow-y: auto; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
+
+/* ---- paridad con el prototipo: tarjetas, etapas, barra de resumen, celdas de oferta ---- */
+.pm-tarjetas { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); margin-bottom: 1rem; }
+.pm-tarjetas--anchas { grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); }
+.pm-atencion { display: block; padding: 0.875rem; color: inherit; text-decoration: none; cursor: pointer; text-align: left; font: inherit;
+  background-color: var(--color-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
+.pm-atencion:hover { background-color: var(--color-surface-hover); }
+.pm-atencion.is-cero { opacity: 0.6; }
+.pm-atencion__n { font-size: 1.75rem; font-weight: 700; line-height: 1.1; }
+.pm-prog { height: 0.375rem; margin-top: 0.5rem; overflow: hidden; border-radius: 999px; background-color: var(--color-surface-muted); }
+.pm-prog > i { display: block; height: 100%; background-color: var(--color-accent); }
+.pm-etapas-lista { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.375rem 0 0; padding: 0; list-style: none; }
+.pm-etapas-lista li { padding: 0.125rem 0.625rem; font-size: 0.8125rem; border-radius: 999px; color: var(--color-text-muted);
+  background-color: var(--color-surface-muted); border: 1px solid var(--color-border-subtle); }
+.pm-etapas-lista li.hecha { color: var(--color-text); }
+.pm-etapas-lista li.actual { color: var(--color-on-ink); background-color: var(--color-primary); border-color: var(--color-primary); }
+.pm-barra { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem;
+  padding: 0.625rem 0.875rem; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.pm-sep { flex: 1 1 auto; }
+.pm-cab { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1rem; justify-content: space-between; margin-bottom: 0.5rem; }
+.pm-resumen { min-width: 16rem; padding: 0.75rem; background-color: var(--color-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
+.pm-oferta { display: flex; justify-content: space-between; gap: 0.5rem; min-height: 4rem; padding: 0.375rem; border-radius: var(--radius-sm, 6px); cursor: pointer; border: 1px solid transparent; }
+.pm-oferta:hover { background-color: var(--color-surface-hover); }
+.pm-oferta:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.pm-oferta.is-elegida { background-color: var(--color-accent-soft); border-color: var(--color-accent); }
+.pm-oferta.is-sinprecio { cursor: default; color: var(--color-text-subtle); }
+.pm-oferta .pm-lado { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+.pm-mejor { color: var(--color-accent); font-weight: 700; }
+.pm-chip { display: inline-block; padding: 0.0625rem 0.5rem; font-size: 0.8125rem; border-radius: 999px; background-color: var(--color-surface-muted); border: 1px solid var(--color-border-subtle); }
+.pm-fila-alerta td { background-color: color-mix(in srgb, var(--color-warning, #d97706) 8%, transparent); }
+.pm-avisos { margin: 0 0 0.5rem; padding-left: 1.25rem; font-size: 0.875rem; }
+.pm-avisos .error { color: var(--color-danger, #b91c1c); font-weight: 600; }
+.pm-avisos .aviso { color: var(--color-text); }
+.pm-avisos .info { color: var(--color-text-muted); }
+.pm-vacio { padding: 1.5rem; text-align: center; color: var(--color-text-muted); border: 1px dashed var(--color-border); border-radius: var(--radius-md); }
+.pm-vacio > strong { display: block; color: var(--color-text); margin-bottom: 0.25rem; }
+.pm-grupo td { font-weight: 600; background-color: var(--color-surface-muted); }
+.pm-mensaje { margin: 0; padding: 0.75rem; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono, monospace); font-size: 0.8125rem;
+  background-color: var(--color-surface-muted); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }

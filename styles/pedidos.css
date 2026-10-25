@@ -1,0 +1,51 @@
+/* Estilos exclusivos de Mesa de compra / módulo Pedidos.
+   Se separan de modulos.css para que no intervengan en otros módulos. */
+
+/* ---------- Mesa de compra (flujo Pedidos sobre AGOTADOS) ---------- */
+.ped-mesa { display: block; min-width: 0; }
+.ped-intro, .ped-panel-title, .ped-purchase-heading, .ped-line-head, .ped-line-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.ped-intro { margin: 0 0 0.75rem; }
+.ped-intro > div { min-width: 0; }
+.ped-filter { flex: 1 1 14rem; max-width: 24rem; }
+.ped-select-compra { flex: 0 1 32rem; min-width: min(100%, 18rem); }
+.ped-form-row { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem; }
+.ped-form-row > .ped-filter { flex: 1 1 20rem; }
+.ped-panel { padding: 1rem; margin-top: 0.75rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.ped-panel > :first-child { margin-top: 0; }
+.ped-panel-title { align-items: flex-start; flex-wrap: wrap; }
+.ped-inline { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ped-inline select { min-width: 15rem; max-width: 25rem; }
+.ped-provider-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
+.ped-provider-picker label { align-items: flex-start; }
+.ped-provider-picker .mod-sub { margin-left: auto; }
+.ped-purchase-heading { margin: 0.75rem 0; padding: 1rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); background: var(--color-surface); }
+.ped-purchase-heading h2 { margin-bottom: 0.4rem; }
+.ped-purchase-stats { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ped-purchase-stats span { padding: 0.4rem 0.65rem; color: var(--color-text-muted); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); font-size: 0.8125rem; white-space: nowrap; }
+.ped-purchase-stats strong { color: var(--color-text); }
+.ped-provider-row { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(15rem, 2fr); align-items: center; gap: 0.5rem 1rem; padding: 0.75rem 0; border-top: 1px solid var(--color-border-subtle); }
+.ped-provider-name { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.ped-provider-actions { display: flex; flex-wrap: wrap; gap: 0.375rem; justify-content: flex-end; }
+.ped-conditions { grid-column: 1 / -1; }
+.ped-conditions summary { margin: 0.25rem 0; }
+.ped-conditions-grid { display: grid; grid-template-columns: repeat(4, minmax(6rem, 1fr)) auto; align-items: end; gap: 0.5rem; padding: 0.5rem 0; }
+.ped-line-card { padding: 0.75rem; margin-top: 0.75rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
+.ped-line-head { align-items: flex-start; margin-bottom: 0.75rem; }
+.ped-line-head > div { min-width: 0; }
+.ped-line-footer { flex-wrap: wrap; margin-top: 0.75rem; }
+.ped-line-footer .mod-sub { max-width: 42rem; }
+.ped-base-select { width: auto; min-width: 12rem; }
+.ped-alert--error { color: var(--color-danger); background: var(--color-danger-soft); border-color: var(--color-danger-border); }
+.ped-warning-check { max-width: 44rem; }
+
+@media (max-width: 52rem) {
+  .ped-intro, .ped-purchase-heading { align-items: stretch; flex-direction: column; }
+  .ped-select-compra { max-width: none; width: 100%; }
+  .ped-provider-row { grid-template-columns: 1fr; }
+  .ped-provider-actions { justify-content: flex-start; }
+  .ped-conditions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ped-conditions-grid button { grid-column: 1 / -1; }
+  .ped-purchase-stats { width: 100%; }
+}

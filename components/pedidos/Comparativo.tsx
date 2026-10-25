@@ -5,10 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Combobox from '@/components/Combobox';
 import SelectorLinea from '@/components/SelectorLinea';
 import { useTiempoReal } from '@/components/useTiempoReal';
+import type { PermisosPedidos } from '@/components/pedidos/usePermisosPedidos';
 import {
-  idVisible, pesos, TABLAS_PEDIDOS, textoCajas,
+  idVisible, pesos, TABLAS_PEDIDOS, textoCajas, type ProveedorLista,
 } from '@/components/pedidos/comun';
-import TablaExcel from '@/components/TablaExcel';
 
 const POR_PAGINA = 50;
 
@@ -16,7 +16,6 @@ interface Celda {
   cotizacion_id: string;
   proveedor_id: number;
   proveedor: string;
-  documento: string | null;
   solicitud_numero: string;
   solicitud_estado: string;
   costo_unitario: number | null;
@@ -65,16 +64,21 @@ const firma = (c: Celda) =>
     c.dias_entrega, c.flete, c.unidades_por_caja, c.observacion].join('|');
 
 /**
- * Tabla comparativa: una fila por ítem en cotización y una columna por proveedor consultado (como la
- * matriz del Excel "PEDIDO LATON"). Se digitan los precios en la misma tabla, ★ marca el mejor costo de
- * cada ítem y se elige el ganador sin salir de aquí. Los ganadores pasan a "Órdenes de compra".
+ * Paso 3 — Comparativo. Una fila por ítem en cotización y una columna por proveedor consultado (como la
+ * matriz del Excel "PEDIDO LATON"). Se digitan los costos en la misma tabla, ★ marca el mejor costo con
+ * IVA de cada ítem y se elige el ganador sin salir de aquí: de a uno, o en bloque ("el más barato en todos",
+ * "todo de este proveedor"). Lo elegido se resume abajo y de ahí se pasa directo a las órdenes de compra.
  */
 export default function Comparativo({
   supabase,
   organizacionId,
+  permisos,
+  onIrAOrdenes,
 }: {
   supabase: SupabaseClient;
   organizacionId: string;
+  permisos: PermisosPedidos;
+  onIrAOrdenes: () => void;
 }) {
   const [lineas, setLineas] = useState<string[]>([]);
   const [linea, setLinea] = useState('');
@@ -82,9 +86,14 @@ export default function Comparativo({
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState('');
   const [proveedor, setProveedor] = useState('');
+  const [proveedores, setProveedores] = useState<ProveedorLista[]>([]);
   const [pagina, setPagina] = useState(0);
   const [filas, setFilas] = useState<FilaMatriz[]>([]);
+  const [porGenerar, setPorGenerar] = useState<{ proveedor_id: number; items: number; total_con_iva: number }[]>([]);
   const [error, setError] = useState('');
+  const [aviso, setAviso] = useState('');
+  const [trabajando, setTrabajando] = useState(false);
+  const [confirmaQuitar, setConfirmaQuitar] = useState(false);
   const peticion = useRef(0);
 
   useEffect(() => {
@@ -100,24 +109,34 @@ export default function Comparativo({
       const lista = (data ?? []) as (string | { linea: string })[];
       setLineas(lista.map((d) => (typeof d === 'string' ? d : d.linea)));
     });
+    supabase.rpc('listar_proveedores_pedidos', { p_org: organizacionId }).then(({ data }) => {
+      setProveedores((data ?? []) as ProveedorLista[]);
+    });
   }, [supabase, organizacionId]);
 
   const cargar = useCallback(async () => {
     const n = ++peticion.current;
-    const { data, error } = await supabase.rpc('matriz_cotizaciones', {
-      p_org: organizacionId,
-      p_linea: linea || null,
-      p_busqueda: busqueda || null,
-      p_limit: POR_PAGINA,
-      p_offset: pagina * POR_PAGINA,
-    });
+    // Los filtros de proveedor y estado los aplica el servidor: valen para TODOS los ítems, no solo la página
+    const [m, g] = await Promise.all([
+      supabase.rpc('matriz_cotizaciones', {
+        p_org: organizacionId,
+        p_linea: linea || null,
+        p_busqueda: busqueda || null,
+        p_limit: POR_PAGINA,
+        p_offset: pagina * POR_PAGINA,
+        p_proveedor: proveedor ? Number(proveedor) : null,
+        p_estado: estado || null,
+      }),
+      supabase.rpc('listar_ordenes_por_generar', { p_org: organizacionId }),
+    ]);
     if (n !== peticion.current) return;
-    if (error) setError(error.message);
+    if (m.error) setError(m.error.message);
     else {
       setError('');
-      setFilas((data ?? []) as FilaMatriz[]);
+      setFilas((m.data ?? []) as FilaMatriz[]);
     }
-  }, [supabase, organizacionId, linea, busqueda, pagina]);
+    if (!g.error) setPorGenerar((g.data ?? []) as { proveedor_id: number; items: number; total_con_iva: number }[]);
+  }, [supabase, organizacionId, linea, busqueda, pagina, proveedor, estado]);
 
   useEffect(() => {
     cargar();
@@ -132,34 +151,64 @@ export default function Comparativo({
     await cargar();
   };
 
-  // Columnas: todos los proveedores que aparecen en esta página
+  // Columnas: todos los proveedores que aparecen en esta página (o solo el filtrado)
   const proveedoresPagina = useMemo(() => {
-    const mapa = new Map<number, { nombre: string; documento: string | null }>();
-    filas.forEach((f) => f.cotizaciones.forEach((c) => mapa.set(c.proveedor_id, { nombre: c.proveedor, documento: c.documento })));
-    return Array.from(mapa, ([id, v]) => ({ id, nombre: v.nombre, documento: v.documento })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    const mapa = new Map<number, string>();
+    filas.forEach((f) => f.cotizaciones.forEach((c) => mapa.set(c.proveedor_id, c.proveedor)));
+    return Array.from(mapa, ([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   }, [filas]);
 
   const columnas = proveedor ? proveedoresPagina.filter((p) => String(p.id) === proveedor) : proveedoresPagina;
-
-  const visibles = filas.filter((f) => {
-    if (proveedor && !f.cotizaciones.some((c) => String(c.proveedor_id) === proveedor)) return false;
-    const hayGanador = f.cotizaciones.some((c) => c.seleccionado);
-    if (estado === 'sin_ganador') return !hayGanador;
-    if (estado === 'con_ganador') return hayGanador;
-    if (estado === 'faltan') return f.cotizaciones.some((c) => c.fecha_respuesta === null);
-    return true;
-  });
 
   const total = filas[0]?.total ?? 0;
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const conGanador = filas.filter((f) => f.cotizaciones.some((c) => c.seleccionado)).length;
 
+  // ---- elegir en bloque (solo sobre los ítems de esta página, los que se ven) ----
+  const elegible = (c: Celda) => c.disponible === true && c.costo_unitario !== null;
+  const sinGanadorConOferta = filas.filter(
+    (f) => !f.cotizaciones.some((c) => c.seleccionado) && f.cotizaciones.some(elegible),
+  );
+  const delProveedor = proveedor
+    ? filas.filter((f) => f.cotizaciones.some((c) => String(c.proveedor_id) === proveedor && elegible(c)))
+    : [];
+  const nombreProveedorFiltro = proveedores.find((p) => String(p.id) === proveedor)?.nombre ?? '';
+  const nombreItem = (id: number | string) => filas.find((f) => String(f.item_id) === String(id))?.nombre_base ?? String(id);
+
+  async function elegirEnBloque(items: { item_id: number; proveedor_id?: number }[], quitar = false) {
+    setTrabajando(true);
+    setError('');
+    setAviso('');
+    const { data, error } = await supabase.rpc('cotizacion_elegir_masivo', {
+      p_org: organizacionId,
+      p_items: items,
+      p_quitar: quitar,
+    });
+    setTrabajando(false);
+    setConfirmaQuitar(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    const omitidos = ((data?.omitidos ?? []) as { item_id: number | string; motivo: string }[]);
+    setAviso(
+      `${quitar ? 'Se quitó la elección de' : 'Se eligió proveedor para'} ${data?.procesados ?? 0} ítem(s).` +
+        (omitidos.length > 0
+          ? ` No se pudo en ${omitidos.length}: ${omitidos.slice(0, 5).map((o) => `${nombreItem(o.item_id)} (${o.motivo})`).join('; ')}${omitidos.length > 5 ? '…' : ''}`
+          : ''),
+    );
+    await cargar();
+  }
+
+  const totalElegido = porGenerar.reduce((suma, g) => suma + Number(g.total_con_iva ?? 0), 0);
+  const itemsElegidos = porGenerar.reduce((suma, g) => suma + Number(g.items ?? 0), 0);
+
   return (
     <div>
       <p className="mod-text mod-mt-0 mod-mb-2">
         Compara lo que respondió cada proveedor. Digita el costo antes de IVA y sal del campo para guardarlo;
-        marca “No disponible” si no lo tiene. ★ es el mejor costo con IVA de cada ítem. Los ganadores se convierten
-        en órdenes en la pestaña “Órdenes de compra”.
+        marca “No disponible” si no lo tiene. ★ es el mejor costo con IVA de cada ítem. Elige el ganador de cada
+        ítem, o usa las acciones en bloque; lo elegido se resume abajo y pasa a “Órdenes de compra”.
       </p>
 
       <div className="mod-toolbar mod-toolbar--top">
@@ -178,9 +227,12 @@ export default function Comparativo({
           className="ui-input ui-input--sm mod-auto" style={{ minWidth: 240 }}
         />
         <Combobox
-          opciones={proveedoresPagina.map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: p.documento ?? undefined }))}
+          opciones={proveedores.map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: p.documento }))}
           valor={proveedor}
-          onCambio={setProveedor}
+          onCambio={(v) => {
+            setProveedor(v);
+            setPagina(0);
+          }}
           etiqueta="Proveedor"
           vacio="Todos los proveedores"
           ancho={260}
@@ -188,7 +240,10 @@ export default function Comparativo({
         <Combobox
           opciones={FILTROS_ESTADO}
           valor={estado}
-          onCambio={setEstado}
+          onCambio={(v) => {
+            setEstado(v);
+            setPagina(0);
+          }}
           etiqueta="Estado"
           vacio="Todos los estados"
           ancho={230}
@@ -197,13 +252,63 @@ export default function Comparativo({
       </div>
 
       {error && <p className="mod-text">Error: {error}</p>}
+      {aviso && (
+        <p className="mod-notice mod-text">
+          {aviso}{' '}
+          <button type="button" className="ui-btn ui-btn--sm" onClick={() => setAviso('')}>Entendido</button>
+        </p>
+      )}
 
       <div className="mod-text mod-mb-2">
-        {total} ítem(s) en cotización · {conGanador} con ganador en esta página
-        {(estado || proveedor) && ` · mostrando ${visibles.length} con el filtro (se aplica a esta página)`}
+        {total} ítem(s) en cotización{(estado || proveedor) ? ' con el filtro' : ''} · {conGanador} con ganador en esta página
       </div>
 
-      <TablaExcel clave="comparativo-1" etiqueta="Tabla comparativa de cotizaciones"><table className="mod-table">
+      {permisos.ganadorEditar && filas.length > 0 && (
+        <div className="mod-bulkbar" role="region" aria-label="Elegir en bloque">
+          <span className="mod-semibold">Elegir en bloque (esta página):</span>
+          <button
+            type="button"
+            className="ui-btn ui-btn--sm ui-btn--primary"
+            disabled={trabajando || sinGanadorConOferta.length === 0}
+            onClick={() => elegirEnBloque(sinGanadorConOferta.map((f) => ({ item_id: f.item_id })))}
+          >
+            El más barato en los {sinGanadorConOferta.length} sin ganador
+          </button>
+          {proveedor && (
+            <button
+              type="button"
+              className="ui-btn ui-btn--sm"
+              disabled={trabajando || delProveedor.length === 0}
+              onClick={() => elegirEnBloque(delProveedor.map((f) => ({ item_id: f.item_id, proveedor_id: Number(proveedor) })))}
+            >
+              Todo con {nombreProveedorFiltro} ({delProveedor.length})
+            </button>
+          )}
+          {conGanador > 0 && !confirmaQuitar && (
+            <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={() => setConfirmaQuitar(true)}>
+              Quitar elecciones
+            </button>
+          )}
+          {confirmaQuitar && (
+            <>
+              <span className="mod-text">¿Quitar el ganador de los ítems de esta página?</span>
+              <button
+                type="button"
+                className="ui-btn ui-btn--sm"
+                disabled={trabajando}
+                onClick={() => elegirEnBloque(filas.filter((f) => f.cotizaciones.some((c) => c.seleccionado)).map((f) => ({ item_id: f.item_id })), true)}
+              >
+                Sí, quitar
+              </button>
+              <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={() => setConfirmaQuitar(false)}>No</button>
+            </>
+          )}
+          <span className="mod-sub">Solo se eligen cotizaciones con costo y disponibilidad; la cantidad sale de la solicitud.</span>
+        </div>
+      )}
+
+      <div className="mod-scroll">
+        <table className="mod-table">
           <thead>
             <tr>
               {['Item', 'Nombre Base', 'Cant.'].map((h) => (
@@ -215,7 +320,7 @@ export default function Comparativo({
             </tr>
           </thead>
           <tbody>
-            {visibles.map((f) => {
+            {filas.map((f) => {
               const conIva = f.cotizaciones
                 .filter((c) => c.disponible === true && c.costo_con_iva !== null)
                 .map((c) => c.costo_con_iva as number);
@@ -242,6 +347,7 @@ export default function Comparativo({
                             esMejor={mejor !== null && c.disponible === true && c.costo_con_iva === mejor}
                             accion={accion}
                             avisar={setError}
+                            puedeElegirGanador={permisos.ganadorEditar}
                           />
                         ) : (
                           <span className="mod-sub">—</span>
@@ -252,36 +358,56 @@ export default function Comparativo({
                 </tr>
               );
             })}
-            {visibles.length === 0 && (
+            {filas.length === 0 && (
               <tr>
                 <td colSpan={3 + columnas.length}>
-                  {filas.length === 0
-                    ? 'No hay ítems en cotización. Crea solicitudes desde la pestaña “Por proveedor”.'
-                    : 'Ningún ítem coincide con el filtro'}
+                  {(estado || proveedor || linea || busqueda)
+                    ? 'Ningún ítem coincide con el filtro'
+                    : 'No hay ítems en cotización. Crea solicitudes en el paso 2 (Cotizar).'}
                 </td>
               </tr>
             )}
           </tbody>
-        </table></TablaExcel>
+        </table>
+      </div>
 
       <div className="mod-pager">
-        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
+        <button type="button" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
         <span>Página {pagina + 1} de {paginas}</span>
-        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+        <button type="button" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+      </div>
+
+      <div className="mod-bulkbar mod-bulkbar--sticky" role="region" aria-label="Resumen de lo elegido">
+        {porGenerar.length > 0 ? (
+          <>
+            <span className="mod-semibold">
+              Elegido en total: {itemsElegidos} ítem(s) · {porGenerar.length} proveedor(es) · {pesos(totalElegido)} con IVA
+            </span>
+            <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={onIrAOrdenes}>
+              Revisar y generar {porGenerar.length} orden(es) de compra →
+            </button>
+          </>
+        ) : (
+          <span className="mod-text">Aún no hay ganadores elegidos. Lo que elijas aparece aquí y se convierte en órdenes de compra.</span>
+        )}
       </div>
     </div>
   );
 }
 
 function CeldaCotizacion({
-  c, fila, esMejor, accion, avisar,
+  c, fila, esMejor, accion, avisar, puedeElegirGanador,
 }: {
   c: Celda;
   fila: FilaMatriz;
   esMejor: boolean;
   accion: Accion;
   avisar: (mensaje: string) => void;
+  /** Permiso pedidos_ganador / editar: sin él, la celda solo registra costos. */
+  puedeElegirGanador: boolean;
 }) {
+  const [pidiendo, setPidiendo] = useState(false);
+  const [cantNueva, setCantNueva] = useState('');
   const [costo, setCosto] = useState(c.costo_unitario?.toString() ?? '');
   const [nd, setNd] = useState(c.disponible === false);
   const [mas, setMas] = useState(false);
@@ -315,18 +441,23 @@ function CeldaCotizacion({
       accion('cotizacion_elegir', { p_cotizacion: c.cotizacion_id, p_elegir: false });
       return;
     }
-    let cantidad = c.cantidad_pedir ?? fila.cantidad_a_cotizar;
+    const cantidad = c.cantidad_pedir ?? fila.cantidad_a_cotizar;
     if (cantidad === null) {
-      // Un agotado sin cantidad sugerida: Compras la define al elegir
-      const escrito = window.prompt(`Cantidad a pedir a ${c.proveedor}:`);
-      if (!escrito) return;
-      cantidad = Number(escrito);
-      if (!(cantidad > 0)) {
-        avisar('Cantidad no válida');
-        return;
-      }
+      // Un agotado sin cantidad sugerida: Compras la define aquí mismo, en la celda
+      setPidiendo(true);
+      return;
     }
     accion('cotizacion_elegir', { p_cotizacion: c.cotizacion_id, p_cantidad_pedir: cantidad });
+  }
+
+  function confirmarCantidad() {
+    const n = Number(cantNueva);
+    if (!(n > 0)) {
+      avisar('Cantidad no válida');
+      return;
+    }
+    setPidiendo(false);
+    accion('cotizacion_elegir', { p_cotizacion: c.cotizacion_id, p_cantidad_pedir: n });
   }
 
   function guardarCantidadPedir() {
@@ -338,7 +469,7 @@ function CeldaCotizacion({
   return (
     <div className={c.seleccionado ? 'mod-pick is-selected' : 'mod-pick'}>
       <div className="mod-flex mod-gap-1 mod-center">
-        {esMejor && <span className="mod-star" aria-label="Mejor costo" title="Mejor costo con IVA">★</span>}
+        {esMejor && <span aria-label="Mejor costo" title="Mejor costo con IVA">★</span>}
         <input
           value={costo}
           inputMode="decimal"
@@ -379,8 +510,30 @@ function CeldaCotizacion({
       </label>
 
       <label className="mod-sub mod-block">
-        <input type="checkbox" checked={c.seleccionado} disabled={!puedeElegir} onChange={elegir} /> Elegir
+        <input
+          type="checkbox"
+          checked={c.seleccionado || pidiendo}
+          disabled={!puedeElegir || !puedeElegirGanador}
+          title={!puedeElegirGanador ? 'No tienes permiso para elegir el proveedor ganador' : undefined}
+          onChange={elegir}
+        /> Elegir
       </label>
+      {pidiendo && !c.seleccionado && (
+        <div className="mod-sub">
+          Cant. a pedir:{' '}
+          <input
+            value={cantNueva}
+            inputMode="numeric"
+            autoFocus
+            onChange={(e) => setCantNueva(e.target.value.replace(/\D/g, ''))}
+            onKeyDown={(e) => { if (e.key === 'Enter') confirmarCantidad(); }}
+            className="ui-input ui-input--sm mod-cell-input" style={{ width: 60 }}
+            aria-label={`Cantidad a pedir a ${c.proveedor}, ítem ${fila.item_id}`}
+          />{' '}
+          <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={confirmarCantidad}>Elegir</button>{' '}
+          <button type="button" className="ui-btn ui-btn--sm" onClick={() => setPidiendo(false)}>Cancelar</button>
+        </div>
+      )}
       {c.seleccionado && (
         <div className="mod-sub">
           Cant. a pedir:{' '}

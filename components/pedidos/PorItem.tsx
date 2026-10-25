@@ -5,9 +5,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import {
-  idVisible, PanelTexto, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type ProveedorLista,
+  idVisible, pesos, TABLAS_PEDIDOS, textoUltimaOrden, type ProveedorLista,
 } from '@/components/pedidos/comun';
-import TablaExcel from '@/components/TablaExcel';
+import type { SolicitudCreada } from '@/components/pedidos/ResultadoSolicitudes';
 
 const POR_PAGINA = 50;
 
@@ -56,11 +56,6 @@ interface Seleccion {
   extra: number[];
 }
 
-interface Resultado {
-  solicitudes: { id: string; proveedor: string; items: number; texto: string }[];
-  omitidos: number;
-}
-
 /**
  * Vista "por ítem": no hay proveedor elegido, así que Compras parte del ítem. Ve a todos los
  * proveedores que lo suministran, marca a cuáles les va a pedir cotización y el sistema crea una
@@ -72,20 +67,29 @@ export default function PorItem({
   linea,
   busqueda,
   proveedores,
+  preIds,
+  onCreadas,
 }: {
   supabase: SupabaseClient;
   organizacionId: string;
   linea: string;
   busqueda: string;
   proveedores: ProveedorLista[];
+  /** Ítems que llegan marcados desde Solicitudes (o recién creados): se muestran primero y quedan marcados. */
+  preIds: number[];
+  /** Se llama al crear las solicitudes; Cotizar muestra los mensajes. */
+  onCreadas: (creadas: SolicitudCreada[], omitidos: number) => void;
 }) {
   const [items, setItems] = useState<ItemCatalogo[]>([]);
   const [pagina, setPagina] = useState(0);
   const [sel, setSel] = useState<Record<number, Seleccion>>({});
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
-  const [resultado, setResultado] = useState<Resultado | null>(null);
   const peticion = useRef(0);
+  const yaMarcados = useRef<Set<number>>(new Set());
+  const hayFiltro = linea !== '' || busqueda.trim() !== '';
+  // Con ítems preseleccionados y sin filtro, la lista es esa selección; con filtro se busca en todo el catálogo
+  const soloPre = preIds.length > 0 && !hayFiltro;
 
   // Al cambiar de línea o de búsqueda se vuelve a la primera página (la selección se conserva)
   useEffect(() => {
@@ -100,6 +104,7 @@ export default function PorItem({
       p_busqueda: busqueda || null,
       p_limit: POR_PAGINA,
       p_offset: pagina * POR_PAGINA,
+      p_items: soloPre ? preIds : null,
     });
     if (n !== peticion.current) return;
     if (error) setError(error.message);
@@ -107,7 +112,7 @@ export default function PorItem({
       setError('');
       setItems((data ?? []) as ItemCatalogo[]);
     }
-  }, [supabase, organizacionId, linea, busqueda, pagina]);
+  }, [supabase, organizacionId, linea, busqueda, pagina, soloPre, preIds]);
 
   useEffect(() => {
     cargar();
@@ -144,6 +149,41 @@ export default function PorItem({
       // Al marcar, se fija la lista de proveedores (así vale aunque el ítem salga de la página)
       if (nuevo.on && nuevo.provs === null) nuevo.provs = [...disponibles(i), ...nuevo.extra];
       return { ...todo, [i.item_id]: nuevo };
+    });
+  }
+
+  // Los ítems que llegan de Solicitudes (o recién creados) quedan marcados, una sola vez por ítem
+  useEffect(() => {
+    items.forEach((i) => {
+      if (preIds.includes(i.item_id) && !yaMarcados.current.has(i.item_id)) {
+        yaMarcados.current.add(i.item_id);
+        cambiar(i, { on: true });
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, preIds]);
+
+  function marcarPagina(on: boolean) {
+    items.forEach((i) => {
+      if (elegidos(i).length > 0 || !on) cambiar(i, { on });
+    });
+  }
+
+  // Asigna un proveedor a todos los ítems marcados (aunque algunos no estén en esta página)
+  function agregarATodos(valor: string) {
+    if (!valor) return;
+    const id = Number(valor);
+    setSel((todo) => {
+      const nuevo = { ...todo };
+      Object.entries(todo).forEach(([k, s]) => {
+        if (!s.on) return;
+        nuevo[Number(k)] = {
+          ...s,
+          extra: s.extra.includes(id) ? s.extra : [...s.extra, id],
+          provs: Array.from(new Set([...(s.provs ?? []), id])),
+        };
+      });
+      return nuevo;
     });
   }
 
@@ -192,72 +232,39 @@ export default function PorItem({
       setGuardando(false);
       return;
     }
-    const creadas = (data?.creadas ?? []) as { solicitud_id: string; proveedor_id: number; items: number }[];
+    const creadas = (data?.creadas ?? []) as SolicitudCreada[];
     const omitidos = (data?.omitidos ?? []) as unknown[];
-    const solicitudes: Resultado['solicitudes'] = [];
-    for (const c of creadas) {
-      const t = await supabase.rpc('solicitud_texto', { p_org: organizacionId, p_solicitud: c.solicitud_id });
-      solicitudes.push({
-        id: c.solicitud_id,
-        proveedor: nombreProv(c.proveedor_id),
-        items: c.items,
-        texto: t.error ? `Error al generar el texto: ${t.error.message}` : (t.data as string),
-      });
-    }
-    setResultado({ solicitudes, omitidos: omitidos.length });
     setSel({});
+    yaMarcados.current = new Set();
     setGuardando(false);
+    onCreadas(creadas, omitidos.length);
   }
-
-  if (resultado) {
-    return (
-      <div>
-        <p className="mod-md">
-          {resultado.solicitudes.length === 0
-            ? 'No se creó ninguna solicitud.'
-            : `Se crearon ${resultado.solicitudes.length} solicitud(es), una por proveedor. Copia cada texto y envíalo.`}
-        </p>
-        {resultado.omitidos > 0 && (
-          <p className="mod-text">
-            {resultado.omitidos} combinación(es) ítem-proveedor se omitieron porque ya estaban en una solicitud abierta.
-          </p>
-        )}
-        {resultado.solicitudes.map((s) => (
-          <PanelTexto
-            key={s.id}
-            titulo={`${s.proveedor} — ${s.items} ítem(s) (sin costos)`}
-            texto={s.texto}
-            onCopiar={async () => {
-              await supabase.rpc('solicitud_marcar_enviada', { p_org: organizacionId, p_solicitud: s.id });
-            }}
-            onCerrar={() => {}}
-          />
-        ))}
-        <p className="mod-text">
-          Cuando los proveedores respondan, registra los precios y compáralos en la pestaña “Comparativo”.
-        </p>
-        <button type="button" className="ui-btn ui-btn--sm" onClick={() => setResultado(null)}>Terminar</button>
-      </div>
-    );
-  }
-
-  const hayFiltro = linea !== '' || busqueda.trim() !== '';
 
   return (
     <div>
       <p className="mod-text mod-mt-0 mod-mb-2">
-        {hayFiltro
-          ? 'Ítems que coinciden con el filtro; los que tienen agotado reportado salen primero.'
-          : 'Elige una línea o escribe una búsqueda para ver ítems. Mientras tanto, estos son los ítems con agotado reportado.'}{' '}
+        {soloPre
+          ? 'Estos son los ítems que marcaste en Solicitudes. Escribe una búsqueda o elige una línea para sumar otros del catálogo.'
+          : hayFiltro
+            ? 'Ítems que coinciden con el filtro; los que tienen agotado reportado salen primero.'
+            : 'Elige una línea o escribe una búsqueda para ver ítems. Mientras tanto, estos son los ítems con agotado reportado.'}{' '}
         Marca los ítems y los proveedores a los que les vas a pedir cotización.
       </p>
 
       {error && <p className="mod-text">Error: {error}</p>}
 
-      <TablaExcel clave="poritem-1" etiqueta="Tabla de ítems por cotizar"><table className="mod-table">
+      <div className="mod-scroll">
+        <table className="mod-table">
           <thead>
             <tr>
-              <th> </th>
+              <th className="mod-check">
+                <input
+                  type="checkbox"
+                  aria-label="Marcar todos los de esta página"
+                  checked={items.length > 0 && items.every((i) => actual(i).on)}
+                  onChange={(e) => marcarPagina(e.target.checked)}
+                />
+              </th>
               {['Item', 'Nombre Base', 'Línea', 'Agotado en', 'Cant. sugerida', 'Última orden', 'Cant. a cotizar', 'Proveedores a consultar'].map((h) => (
                 <th key={h}>{h}</th>
               ))}
@@ -360,12 +367,13 @@ export default function PorItem({
               </tr>
             )}
           </tbody>
-        </table></TablaExcel>
+        </table>
+      </div>
 
       <div className="mod-pager">
-        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
+        <button type="button" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
         <span>Página {pagina + 1} de {paginas} ({total} ítems)</span>
-        <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+        <button type="button" disabled={pagina + 1 >= paginas} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
       </div>
 
       <div className="mod-mt-3 mod-flex mod-gap-2 mod-center mod-wrap">
@@ -378,7 +386,17 @@ export default function PorItem({
           Crear solicitudes ({marcados.length} ítems → {nSolicitudes} proveedores)
         </button>
         {marcados.length > 0 && (
-          <button type="button" className="ui-btn ui-btn--sm" onClick={() => setSel({})}>Limpiar selección</button>
+          <>
+            <Combobox
+              opciones={proveedores.map((p) => ({ valor: String(p.id), texto: p.nombre, detalle: p.documento }))}
+              valor=""
+              onCambio={agregarATodos}
+              etiqueta="Agregar un proveedor a todos los marcados"
+              placeholder="+ Proveedor para todos los marcados…"
+              ancho={280}
+            />
+            <button type="button" className="ui-btn ui-btn--sm" onClick={() => setSel({})}>Limpiar selección</button>
+          </>
         )}
         {sinCantidad.length > 0 && (
           <span className="mod-sub">Falta la cantidad en {sinCantidad.length} ítem(s) sin agotado reportado.</span>

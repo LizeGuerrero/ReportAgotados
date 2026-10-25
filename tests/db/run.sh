@@ -49,6 +49,9 @@ SUITES=(
   "04_admin_extras.sql:EXTRAS_OK"
   "05_seguridad_columnas.sql:SEGURIDAD_OK"
   "06_cxp_fase1.sql:CXP_FASE1_OK"
+  "07_cxp_fase2.sql:CXP_FASE2_OK"
+  "08_cxp_fase3.sql:CXP_FASE3_OK"
+  "09_cxp_fase5.sql:CXP_FASE5_OK"
 )
 
 fallo=0

@@ -32,8 +32,8 @@ select public.t_eq('A tiene permiso Roles/crear', public.tiene_permiso(:'org'::u
 select public.t_eq('A tiene sede asignada', (select sede_id is not null from public.membresias where usuario_id=auth.uid()), true);
 reset role;
 select public.t_eq('viewer sin permisos_rol', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='viewer' and r.organizacion_id=:'org'::uuid), 0::bigint);
-select public.t_eq('admin con 9 módulos', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='admin' and r.organizacion_id=:'org'::uuid), 9::bigint);
-select public.t_eq('Compras con 5', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='Compras' and r.organizacion_id=:'org'::uuid), 5::bigint);
+select public.t_eq('admin con 11 módulos', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='admin' and r.organizacion_id=:'org'::uuid), 11::bigint);
+select public.t_eq('Compras con 6', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='Compras' and r.organizacion_id=:'org'::uuid), 6::bigint);
 select public.t_eq('Comercial con 2', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='Comercial' and r.organizacion_id=:'org'::uuid), 2::bigint);
 select r.id as rol_comercial from public.roles r where r.nombre='Comercial' and r.organizacion_id=:'org'::uuid \gset
 select r.id as rol_viewer from public.roles r where r.nombre='viewer' and r.organizacion_id=:'org'::uuid \gset

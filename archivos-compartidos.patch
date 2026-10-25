@@ -1,0 +1,305 @@
+--- a/app/app/[slug]/layout.tsx
++++ b/app/app/[slug]/layout.tsx
+@@ -23,6 +23,7 @@
+   if (ctx.permisos.pedidos) modulos.push({ clave: 'pedidos', texto: 'Pedidos', href: `${base}/pedidos` });
+   if (ctx.permisos.items) modulos.push({ clave: 'items', texto: 'Ítems', href: `${base}/items` });
+   if (ctx.permisos.proveedores) modulos.push({ clave: 'proveedores', texto: 'Proveedores', href: `${base}/proveedores` });
++  if (ctx.permisos.mensajes) modulos.push({ clave: 'mensajes', texto: 'Mensajes', href: `${base}/mensajes` });
+   // Panel de la organización: solo administradores.
+   if (ctx.esAdmin) modulos.push({ clave: 'admin', texto: 'Administración', href: `${base}/admin` });
+ 
+--- a/app/app/[slug]/page.tsx
++++ b/app/app/[slug]/page.tsx
+@@ -16,6 +16,7 @@
+   if (ctx.permisos.pedidos) redirect(`${base}/pedidos`);
+   if (ctx.permisos.items) redirect(`${base}/items`);
+   if (ctx.permisos.proveedores) redirect(`${base}/proveedores`);
++  if (ctx.permisos.mensajes) redirect(`${base}/mensajes`);
+ 
+   if (ctx.esAdmin) redirect(`${base}/admin`);
+ 
+--- a/components/items/ItemsMaestro.tsx
++++ b/components/items/ItemsMaestro.tsx
+@@ -5,6 +5,7 @@
+ import ItemDetalle from '@/components/items/ItemDetalle';
+ import { usePermisos } from '@/components/items/usePermisos';
+ import { idVisible } from '@/components/pedidos/comun';
++import FormItemNuevo from '@/components/items/FormItemNuevo';
+ 
+ interface FilaItem {
+   item_id: number;
+@@ -120,7 +121,7 @@
+       </div>
+ 
+       {creando && (
+-        <FormNuevo
++        <FormItemNuevo
+           supabase={supabase}
+           organizacionId={organizacionId}
+           onCreado={(id) => {
+@@ -182,51 +183,3 @@
+     </div>
+   );
+ }
+-
+-function FormNuevo({
+-  supabase,
+-  organizacionId,
+-  onCreado,
+-}: {
+-  supabase: ReturnType<typeof createClient>;
+-  organizacionId: string;
+-  onCreado: (id: number) => void;
+-}) {
+-  const [v, setV] = useState({ codigo_erp: '', nombre_base: '', unidad_medida: '', linea: '' });
+-  const [error, setError] = useState('');
+-  const [guardando, setGuardando] = useState(false);
+-
+-  async function crear() {
+-    setError('');
+-    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(v.codigo_erp.trim())) return setError('El código solo puede tener letras, números, punto, guion y guion bajo (máx. 40).');
+-    if (!v.nombre_base.trim()) return setError('Escribe el nombre del ítem.');
+-    setGuardando(true);
+-    const { data, error } = await supabase.rpc('item_crear', { p_org: organizacionId, p_datos: v });
+-    setGuardando(false);
+-    if (error) return setError(error.message);
+-    onCreado(Number(data));
+-  }
+-
+-  return (
+-    <div className="mod-card mod-mb-3">
+-      <div className="mod-semibold mod-mb-2">Nuevo ítem</div>
+-      <div className="mod-flex mod-gap-2 mod-wrap">
+-        <input className="ui-input ui-input--sm" style={{ width: 130 }} placeholder="Código ERP *" value={v.codigo_erp}
+-          onChange={(e) => setV({ ...v, codigo_erp: e.target.value })} />
+-        <input className="ui-input ui-input--sm mod-auto" style={{ minWidth: 300 }} placeholder="Nombre *" value={v.nombre_base}
+-          onChange={(e) => setV({ ...v, nombre_base: e.target.value })} />
+-        <input className="ui-input ui-input--sm" style={{ width: 120 }} placeholder="Unidad" value={v.unidad_medida}
+-          onChange={(e) => setV({ ...v, unidad_medida: e.target.value })} />
+-        <input className="ui-input ui-input--sm" style={{ width: 160 }} placeholder="Línea" value={v.linea}
+-          onChange={(e) => setV({ ...v, linea: e.target.value })} />
+-        <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={guardando} onClick={crear}>
+-          {guardando ? 'Guardando…' : 'Crear'}
+-        </button>
+-      </div>
+-      <p className="mod-sub mod-mt-2 mod-mb-0">
+-        El resto de los datos (IVA, logística, proveedores) se completan dentro del ítem.
+-      </p>
+-      {error && <p className="mod-error mod-text mod-mt-2 mod-mb-0">{error}</p>}
+-    </div>
+-  );
+-}
+--- a/components/proveedores/ProveedoresMaestro.tsx
++++ b/components/proveedores/ProveedoresMaestro.tsx
+@@ -4,6 +4,7 @@
+ import { createClient } from '@/lib/supabase/client';
+ import ProveedorDetalle from '@/components/proveedores/ProveedorDetalle';
+ import { usePermisos } from '@/components/items/usePermisos';
++import FormProveedorNuevo, { TIPOS_DOCUMENTO } from '@/components/proveedores/FormProveedorNuevo';
+ import {  } from '@/components/pedidos/comun';
+ 
+ interface FilaProveedor {
+@@ -20,7 +21,7 @@
+   total: number;
+ }
+ 
+-export const TIPOS_DOCUMENTO = ['NIT', 'CC', 'CE', 'PAS', 'OTRO'] as const;
++export { TIPOS_DOCUMENTO } from '@/components/proveedores/FormProveedorNuevo';
+ const POR_PAGINA = 50;
+ 
+ export default function ProveedoresMaestro({ organizacionId }: { organizacionId: string }) {
+@@ -106,7 +107,7 @@
+       </div>
+ 
+       {creando && (
+-        <FormNuevo
++        <FormProveedorNuevo
+           supabase={supabase}
+           organizacionId={organizacionId}
+           onCreado={(id) => {
+@@ -151,52 +152,3 @@
+     </div>
+   );
+ }
+-
+-function FormNuevo({
+-  supabase, organizacionId, onCreado,
+-}: {
+-  supabase: ReturnType<typeof createClient>;
+-  organizacionId: string;
+-  onCreado: (id: number) => void;
+-}) {
+-  const [v, setV] = useState({ tipo_documento: 'NIT', numero_documento: '', nombre: '', contacto: '', telefono: '', email: '' });
+-  const [error, setError] = useState('');
+-  const [guardando, setGuardando] = useState(false);
+-
+-  async function crear() {
+-    setError('');
+-    if (!/^[A-Za-z0-9]{3,20}$/.test(v.numero_documento.trim().replace(/[\s.]/g, ''))) {
+-      return setError('Documento no válido: de 3 a 20 letras o números, sin guiones ni dígito de verificación.');
+-    }
+-    if (!v.nombre.trim()) return setError('Escribe el nombre del proveedor.');
+-    setGuardando(true);
+-    const { data, error } = await supabase.rpc('proveedor_crear', { p_org: organizacionId, p_datos: v });
+-    setGuardando(false);
+-    if (error) return setError(error.message);
+-    onCreado(Number(data));
+-  }
+-
+-  const set = (k: keyof typeof v, x: string) => setV({ ...v, [k]: x });
+-
+-  return (
+-    <div className="mod-card mod-mb-3">
+-      <div className="mod-semibold mod-mb-2">Nuevo proveedor</div>
+-      <div className="mod-flex mod-gap-2 mod-wrap">
+-        <select className="ui-input ui-input--sm mod-auto" value={v.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)}>
+-          {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{t}</option>)}
+-        </select>
+-        <input className="ui-input ui-input--sm" style={{ width: 170 }} placeholder="Número *" value={v.numero_documento}
+-          onChange={(e) => set('numero_documento', e.target.value)} />
+-        <input className="ui-input ui-input--sm mod-auto" style={{ minWidth: 280 }} placeholder="Nombre *" value={v.nombre} onChange={(e) => set('nombre', e.target.value)} />
+-        <input className="ui-input ui-input--sm" style={{ width: 180 }} placeholder="Contacto" value={v.contacto} onChange={(e) => set('contacto', e.target.value)} />
+-        <input className="ui-input ui-input--sm" style={{ width: 150 }} placeholder="Teléfono" value={v.telefono} onChange={(e) => set('telefono', e.target.value)} />
+-        <input className="ui-input ui-input--sm" style={{ width: 220 }} placeholder="Correo" value={v.email} onChange={(e) => set('email', e.target.value)} />
+-        <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={guardando} onClick={crear}>{guardando ? 'Guardando…' : 'Crear'}</button>
+-      </div>
+-      <p className="mod-sub mod-mt-2 mod-mb-0">
+-        Por defecto cobra IVA al 19 %. Puedes cambiarlo dentro del proveedor.
+-      </p>
+-      {error && <p className="mod-error mod-text mod-mt-2 mod-mb-0">{error}</p>}
+-    </div>
+-  );
+-}
+--- a/lib/modulos.ts
++++ b/lib/modulos.ts
+@@ -8,6 +8,7 @@
+   pedidos: { permiso: 'pedidos', nombre: 'Pedidos' },
+   items: { permiso: 'Items', nombre: 'Ítems' },
+   proveedores: { permiso: 'Proveedores', nombre: 'Proveedores' },
++  mensajes: { permiso: 'mensajes', nombre: 'Mensajes' },
+ };
+ 
+ /** Nombre para mostrar de un segmento de URL protegido (incluye el panel de administración). */
+--- a/lib/orgContext.ts
++++ b/lib/orgContext.ts
+@@ -6,7 +6,7 @@
+   nombreUsuario: string;
+   iniciales: string;
+   /** Módulos que el usuario puede ver, según tiene_permiso() en la base de datos. */
+-  permisos: { agotados: boolean; pedidos: boolean; items: boolean; proveedores: boolean };
++  permisos: { agotados: boolean; pedidos: boolean; items: boolean; proveedores: boolean; mensajes: boolean };
+   /** Administrador activo de esta organización (rol "admin"). */
+   esAdmin: boolean;
+ }
+@@ -37,12 +37,13 @@
+       p_accion: 'ver',
+     });
+ 
+-  const [perfil, agotados, pedidos, items, proveedores, admin] = await Promise.all([
++  const [perfil, agotados, pedidos, items, proveedores, mensajes, admin] = await Promise.all([
+     supabase.from('profiles').select('nombres, apellidos, username').eq('id', user.id).maybeSingle(),
+     permiso('reporte_agotados'),
+     permiso('pedidos'),
+     permiso('Items'),
+     permiso('Proveedores'),
++    permiso('mensajes'),
+     supabase.rpc('es_admin_org', { p_org: organizacion.id }),
+   ]);
+ 
+@@ -57,7 +58,7 @@
+     organizacion,
+     nombreUsuario,
+     iniciales,
+-    permisos: { agotados: agotados.data === true, pedidos: pedidos.data === true, items: items.data === true, proveedores: proveedores.data === true },
++    permisos: { agotados: agotados.data === true, pedidos: pedidos.data === true, items: items.data === true, proveedores: proveedores.data === true, mensajes: mensajes.data === true },
+     esAdmin: admin.data === true,
+   };
+ });
+--- a/styles/modulos.css
++++ b/styles/modulos.css
+@@ -320,6 +320,40 @@
+   background-color: var(--color-selection);
+ }
+ 
++/* Barra de acciones sobre una selección masiva (Pedidos: Solicitudes y Comparativo) */
++.mod-bulkbar {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: 0.5rem;
++  padding: 0.5rem 0.75rem;
++  margin: 0.5rem 0;
++  border: 1px solid var(--color-border-subtle);
++  border-radius: var(--radius-md);
++  background-color: var(--color-selection);
++}
++.mod-bulkbar--sticky {
++  position: sticky;
++  bottom: 0;
++  z-index: 2;
++  background-color: var(--color-surface);
++  box-shadow: var(--shadow-sm);
++}
++/* Celda de selección: ancho mínimo, sin disparar el clic de la fila */
++.mod-table td.mod-check,
++.mod-table th.mod-check {
++  width: 2rem;
++  text-align: center;
++}
++/* Aviso corto bajo la barra de herramientas (resultado de una operación masiva) */
++.mod-notice {
++  margin: 0.5rem 0;
++  padding: 0.375rem 0.75rem;
++  border: 1px solid var(--color-border-subtle);
++  border-radius: var(--radius-md);
++  background-color: var(--color-warning-soft);
++}
++
+ /* ---------- Utilidades (al final para ganar empates) ---------- */
+ 
+ .mod-flex { display: flex; }
+--- a/tests/db/01_orgs_invitaciones.sql
++++ b/tests/db/01_orgs_invitaciones.sql
+@@ -32,8 +32,8 @@
+ select public.t_eq('A tiene sede asignada', (select sede_id is not null from public.membresias where usuario_id=auth.uid()), true);
+ reset role;
+ select public.t_eq('viewer sin permisos_rol', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='viewer' and r.organizacion_id=:'org'::uuid), 0::bigint);
+-select public.t_eq('admin con 9 módulos', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='admin' and r.organizacion_id=:'org'::uuid), 9::bigint);
+-select public.t_eq('Compras con 5', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='Compras' and r.organizacion_id=:'org'::uuid), 5::bigint);
++select public.t_eq('admin con 11 módulos', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='admin' and r.organizacion_id=:'org'::uuid), 11::bigint);
++select public.t_eq('Compras con 6', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='Compras' and r.organizacion_id=:'org'::uuid), 6::bigint);
+ select public.t_eq('Comercial con 2', (select count(*) from public.permisos_rol p join public.roles r on r.id=p.rol_id where r.nombre='Comercial' and r.organizacion_id=:'org'::uuid), 2::bigint);
+ select r.id as rol_comercial from public.roles r where r.nombre='Comercial' and r.organizacion_id=:'org'::uuid \gset
+ select r.id as rol_viewer from public.roles r where r.nombre='viewer' and r.organizacion_id=:'org'::uuid \gset
+--- a/tests/db/03_roles.sql
++++ b/tests/db/03_roles.sql
+@@ -43,7 +43,7 @@
+ select public.t_eq('rol sin copia = 0 permisos', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_vacio'::uuid), '0');
+ select public.crear_rol(:'org'::uuid, 'Clon admin', null, :'r_admin'::uuid) as r_clon \gset
+ select public.t_eq('copiar admin NO copia el módulo Roles', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_clon'::uuid and modulo_id=:'m_roles'::uuid), '0');
+-select public.t_eq('copiar admin copia los otros 8', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_clon'::uuid), '8');
++select public.t_eq('copiar admin copia los otros 10', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_clon'::uuid), '10');
+ select public.t_err(format($$select public.crear_rol(%L,'supervisor')$$,:'org'),'Ya existe un rol');
+ select public.t_err(format($$select public.crear_rol(%L,'ADMIN')$$,:'org'),'reservado');
+ select public.t_err(format($$select public.crear_rol(%L,'Predeterminado')$$,:'org'),'reservado');
+--- a/tests/db/run.sh
++++ b/tests/db/run.sh
+@@ -48,6 +48,7 @@
+   "03_roles.sql:ROLES_OK"
+   "04_admin_extras.sql:EXTRAS_OK"
+   "05_seguridad_columnas.sql:SEGURIDAD_OK"
++  "06_pedidos_masivo.sql:PEDIDOS_OK"
+ )
+ 
+ fallo=0
+--- a/tests/db/stubs.sql
++++ b/tests/db/stubs.sql
+@@ -21,3 +21,8 @@
+   $$ select coalesce(nullif(current_setting('app.role', true), ''), 'anon') $$;
+ grant usage on schema auth to anon, authenticated, service_role;
+ grant usage on schema public to anon, authenticated, service_role;
++
++-- Supabase instala las extensiones en el esquema "extensions" (las búsquedas usan extensions.unaccent).
++create schema if not exists extensions;
++create extension if not exists unaccent with schema extensions;
++grant usage on schema extensions to anon, authenticated, service_role;

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { PantallaCentrada } from '@/components/app/PantallaCentrada';
 import { SelectorAplicacion, type Aplicacion } from '@/components/app/SelectorAplicacion';
+import { rutaEntradaCxp } from '@/lib/cxpRutas';
 import { obtenerContextoOrg } from '@/lib/orgContext';
 import { createClient } from '@/lib/supabase/server';
 import { etiquetaRol } from '@/lib/roles';
@@ -24,7 +25,7 @@ export default async function OrganizacionInicio({ params }: { params: Promise<{
         : ctx.permisos.proveedores
           ? `${base}/proveedores`
           : null;
-  const rutaCxp = ctx.permisos.cxp ? `${base}/cxp` : ctx.permisos.cxpPagos ? `${base}/cxp-pagados` : null;
+  const rutaCxp = rutaEntradaCxp(base, ctx.permisos);
   if (rutaPedidos && rutaCxp) {
     const aplicaciones: Aplicacion[] = [
       { clave: 'pedidos', titulo: 'Pedidos', descripcion: 'Agotados, cotizaciones, órdenes de compra, ítems y proveedores', href: rutaPedidos },

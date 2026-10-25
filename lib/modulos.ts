@@ -11,6 +11,9 @@ export const MODULOS_PROTEGIDOS: Record<string, { permiso: string; nombre: strin
   // Cuentas por pagar (CXP): la cartera y los pagados tienen su propio permiso.
   cxp: { permiso: 'cxp', nombre: 'Cuentas por pagar' },
   'cxp-pagados': { permiso: 'cxp_pagos', nombre: 'Cuentas pagadas' },
+  'cxp-reglas': { permiso: 'cxp_reglas', nombre: 'Reglas de exclusión' },
+  'cxp-cargar': { permiso: 'cxp_importar', nombre: 'Cargar archivo del ERP' },
+  'cxp-mensajes': { permiso: 'cxp_mensajes', nombre: 'Mensajes al proveedor' },
 };
 
 /** Nombre para mostrar de un segmento de URL protegido (incluye el panel de administración). */

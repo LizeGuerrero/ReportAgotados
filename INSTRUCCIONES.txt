@@ -1,0 +1,22 @@
+AJUSTE DE CSS EXCLUSIVO PARA PEDIDOS
+
+Objetivo
+- Conservar las reglas visuales propias de la Mesa de compra (prefijo .ped-) sin rediseñarlas.
+- Sacar esas reglas del CSS compartido styles/modulos.css.
+- Cargar styles/pedidos.css desde la ruta /app/[slug]/pedidos.
+- No tocar componentes, lógica de Supabase, permisos, autenticación ni los demás módulos.
+
+Archivos incluidos
+1. styles/pedidos.css (nuevo): contiene las reglas específicas existentes de Pedidos, trasladadas sin alterar sus declaraciones.
+2. styles/modulos.css (reemplazo): conserva las reglas comunes a los módulos y deja fuera solo el bloque específico .ped-.
+3. app/app/[slug]/pedidos/page.tsx (reemplazo): mantiene la resolución de organización por obtenerContextoOrg y carga el CSS específico de Pedidos.
+
+Cómo aplicar
+1. Haz una copia de seguridad de esos dos archivos existentes: styles/modulos.css y app/app/[slug]/pedidos/page.tsx.
+2. Extrae el ZIP en la raíz de auth-app conservando las rutas y acepta el reemplazo de los dos archivos indicados.
+3. Verifica que aparezca styles/pedidos.css.
+4. Reinicia Next.js. Si el servidor no se actualiza, deténlo y ejecuta Remove-Item -Recurse -Force .next; luego npm run dev.
+
+Nota
+- No ejecutar SQL ni reemplazar componentes.
+- No se ha cambiado el diseño: las declaraciones de .ped-* son las mismas; solo se trasladaron a un archivo propio de Pedidos. Las utilidades compartidas .mod-* permanecen en modulos.css porque también las usan otros módulos.

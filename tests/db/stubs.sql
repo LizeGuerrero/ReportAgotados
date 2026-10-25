@@ -21,3 +21,8 @@ create function auth.role() returns text language sql stable as
   $$ select coalesce(nullif(current_setting('app.role', true), ''), 'anon') $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
+
+-- Supabase instala las extensiones en el esquema "extensions" (las búsquedas usan extensions.unaccent).
+create schema if not exists extensions;
+create extension if not exists unaccent with schema extensions;
+grant usage on schema extensions to anon, authenticated, service_role;

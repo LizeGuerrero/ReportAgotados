@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Combobox from '@/components/Combobox';
 import { useTiempoReal } from '@/components/useTiempoReal';
+import type { PermisosPedidos } from '@/components/pedidos/usePermisosPedidos';
 import {
-  fecha, idVisible, InsigniaEstado, pesos, RESPUESTAS, TABLAS_PEDIDOS, textoCajas, textoUltimaOrden, type Pedido, type SedePedido,
+  ESTADOS, fecha, idVisible, pesos, RESPUESTAS, TABLAS_PEDIDOS, textoCajas, textoUltimaOrden, type Pedido, type SedePedido,
 } from '@/components/pedidos/comun';
-import TablaExcel from '@/components/TablaExcel';
 
 interface Cotizacion {
   cotizacion_id: string;
@@ -45,12 +45,14 @@ export default function DetalleCotizacion({
   supabase,
   organizacionId,
   pedido,
+  permisos,
   onVolver,
   onCambio,
 }: {
   supabase: SupabaseClient;
   organizacionId: string;
   pedido: Pedido;
+  permisos: PermisosPedidos;
   onVolver: () => void;
   onCambio: () => void;
 }) {
@@ -122,14 +124,14 @@ export default function DetalleCotizacion({
 
   return (
     <div>
-      <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onVolver}>← Volver a pedidos</button>
+      <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onVolver}>← Volver a solicitudes</button>
       <h2 className="mod-h2 mod-mt-3 mod-mb-1">
         Item {idVisible(pedido.item_id, pedido.provisional, pedido.codigo)} — {pedido.nombre_base}
       </h2>
       <div className="mod-text mod-mb-3">
         Línea: {pedido.linea ?? '-'} · IVA de venta: {Math.round((pedido.iva ?? 0) * 100)}% ·{' '}
         Cantidad sugerida total: {pedido.cantidad_sugerida ?? '-'} {pedido.unidad_medida ?? ''} ·{' '}
-        Estado: <InsigniaEstado estado={pedido.estado} />
+        Estado: {ESTADOS[pedido.estado] ?? pedido.estado}
         {pedido.origen === 'manual' && (
           <> · Iniciado por Compras (sin agotado){pedido.provisional ? ' · ítem provisional (sin ID del ERP)' : ''}</>
         )}
@@ -164,7 +166,8 @@ export default function DetalleCotizacion({
       ) : (
         <>
         <h3 className="mod-h3 mod-mt-3 mod-mb-1">Cantidad sugerida por sede</h3>
-        <TablaExcel clave="detallecotizacion-1" etiqueta="Tabla de cotización"><table className="mod-table mod-table--auto">
+        <div className="mod-scroll">
+          <table className="mod-table mod-table--auto">
             <thead>
               <tr>
                 {['Sede', 'Usuario', 'Cant. sugerida', 'Nota', 'Fecha solicitud', 'Respuesta Compras (manual)'].map((h) => (
@@ -199,12 +202,14 @@ export default function DetalleCotizacion({
                 </tr>
               ))}
             </tbody>
-          </table></TablaExcel>
+          </table>
+        </div>
         </>
       )}
 
       <h3 className="mod-h3 mod-mt-4 mod-mb-1">Cotizaciones por proveedor</h3>
-      <TablaExcel clave="detallecotizacion-2" etiqueta="Tabla de cotización"><table className="mod-table">
+      <div className="mod-scroll">
+        <table className="mod-table">
           <thead>
             <tr>
               {[
@@ -225,19 +230,21 @@ export default function DetalleCotizacion({
                 accion={accion}
                 avisar={setError}
                 editable={editable}
+                puedeElegirGanador={permisos.ganadorEditar}
               />
             ))}
             {!cargando && activas.length === 0 && (
               <tr>
                 <td colSpan={14}>
-                  Aún no hay cotizaciones. Crea una solicitud por proveedor (pestaña Por proveedor) o agrega un proveedor aquí abajo.
+                  Aún no hay cotizaciones. Crea una solicitud por proveedor (paso 2, Cotizar) o agrega un proveedor aquí abajo.
                 </td>
               </tr>
             )}
           </tbody>
-        </table></TablaExcel>
+        </table>
+      </div>
       <p className="mod-sub mod-mt-1 mod-mb-0">
-        Flete vacío = no paga flete. La cantidad a pedir se define al elegir el ganador. Los ítems ganadores se agrupan en la pestaña “Órdenes de compra”.
+        Flete vacío = no paga flete. La cantidad a pedir se define al elegir el ganador. Los ítems ganadores se resumen en el Comparativo y pasan a “Órdenes de compra”.
       </p>
 
       {editable && (
@@ -249,7 +256,8 @@ export default function DetalleCotizacion({
         Ver historial de cotizaciones anteriores
       </label>
       {historial && (
-        <TablaExcel clave="detallecotizacion-3" etiqueta="Tabla de cotización"><table className="mod-table mod-table--auto">
+        <div className="mod-scroll">
+          <table className="mod-table mod-table--auto">
             <thead>
               <tr>
                 {['Solicitud', 'Proveedor', 'Fecha', 'Costo unitario', 'Costo con IVA', 'Disponible', 'Días', 'Flete', 'Observación', 'Fue ganador'].map((h) => (
@@ -265,7 +273,7 @@ export default function DetalleCotizacion({
                   <td>{fecha(c.fecha_respuesta ?? c.fecha_solicitud)}</td>
                   <td>{pesos(c.costo_unitario)}</td>
                   <td>{pesos(c.costo_con_iva)}</td>
-                  <td>{c.disponible === null ? '' : <span className={c.disponible ? 'ui-badge ui-badge--success' : 'ui-badge ui-badge--danger'}>{c.disponible ? 'Sí' : 'No'}</span>}</td>
+                  <td>{c.disponible === null ? '' : c.disponible ? 'Sí' : 'No'}</td>
                   <td>{c.dias_entrega ?? ''}</td>
                   <td>{pesos(c.flete)}</td>
                   <td>{c.observacion ?? ''}</td>
@@ -276,20 +284,23 @@ export default function DetalleCotizacion({
                 <tr><td colSpan={10}>Sin historial</td></tr>
               )}
             </tbody>
-          </table></TablaExcel>
+          </table>
+        </div>
       )}
     </div>
   );
 }
 
 function FilaCotizacion({
-  c, mejor, accion, avisar, editable,
+  c, mejor, accion, avisar, editable, puedeElegirGanador,
 }: {
   c: Cotizacion;
   mejor: number | null;
   accion: Accion;
   avisar: (mensaje: string) => void;
   editable: boolean;
+  /** Permiso pedidos_ganador / editar. */
+  puedeElegirGanador: boolean;
 }) {
   const [costo, setCosto] = useState(c.costo_unitario?.toString() ?? '');
   const [disp, setDisp] = useState<'' | 'si' | 'no'>(c.disponible === null ? '' : c.disponible ? 'si' : 'no');
@@ -366,7 +377,7 @@ function FilaCotizacion({
       </td>
       <td className={esMejor ? 'is-strong' : undefined}>
         {conIva !== null ? pesos(conIva) : ''}
-        {esMejor && <div className="mod-sub mod-star">★ mejor costo</div>}
+        {esMejor && <div className="mod-sub">★ mejor costo</div>}
       </td>
       <td>
         <select
@@ -413,12 +424,14 @@ function FilaCotizacion({
             type="radio"
             name="ganador"
             checked={c.seleccionado}
-            disabled={!puedeElegir || !editable}
+            disabled={!puedeElegir || !editable || !puedeElegirGanador}
+            title={!puedeElegirGanador ? 'No tienes permiso para elegir el proveedor ganador' : undefined}
             onChange={() => accion('cotizacion_elegir', { p_cotizacion: c.cotizacion_id })}
           />{' '}
           Elegir
         </label>
         {!puedeElegir && <div className="mod-sub">Guarda costo y disponibilidad</div>}
+        {puedeElegir && !puedeElegirGanador && <div className="mod-sub">Sin permiso para elegir ganador</div>}
         {c.seleccionado && (
           <div className="mod-mt-1">
             Cant. a pedir:{' '}
@@ -431,7 +444,7 @@ function FilaCotizacion({
               aria-label="Cantidad a pedir"
             />
             <div className="mod-sub">{textoCajas(Number(cantPedir), c.unidades_por_caja)}</div>
-            <button type="button" className="ui-btn ui-btn--sm mod-mt-1"
+            <button type="button" className="ui-btn ui-btn--sm mod-mt-1" disabled={!puedeElegirGanador}
               onClick={() => accion('cotizacion_elegir', { p_cotizacion: c.cotizacion_id, p_elegir: false })}>
               Quitar elección
             </button>

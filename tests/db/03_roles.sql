@@ -43,7 +43,7 @@ select public.crear_rol(:'org'::uuid, 'Vacío') as r_vacio \gset
 select public.t_eq('rol sin copia = 0 permisos', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_vacio'::uuid), '0');
 select public.crear_rol(:'org'::uuid, 'Clon admin', null, :'r_admin'::uuid) as r_clon \gset
 select public.t_eq('copiar admin NO copia el módulo Roles', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_clon'::uuid and modulo_id=:'m_roles'::uuid), '0');
-select public.t_eq('copiar admin copia los otros 8', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_clon'::uuid), '8');
+select public.t_eq('copiar admin copia los otros 10', (select count(*)::text from public.listar_permisos_org(:'org'::uuid) where rol_id=:'r_clon'::uuid), '10');
 select public.t_err(format($$select public.crear_rol(%L,'supervisor')$$,:'org'),'Ya existe un rol');
 select public.t_err(format($$select public.crear_rol(%L,'ADMIN')$$,:'org'),'reservado');
 select public.t_err(format($$select public.crear_rol(%L,'Predeterminado')$$,:'org'),'reservado');

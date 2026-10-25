@@ -205,6 +205,11 @@ export default function FormPendiente({ supabase, organizacionId, sedes, inicial
             {campoBusca === 'tercero' && sugerencias.length > 0 && (
               <Sugerencias lista={sugerencias} onElegir={elegirSugerencia} />
             )}
+            {!v.tercero.trim() && v.nombre.trim() && (
+              <p className="ui-hint">
+                Sin NIT no se cruza solo con el ERP y no sale en el total del proveedor (salvo que el nombre coincida).
+              </p>
+            )}
           </div>
 
           <div className="ui-field cxp-suggest cxp-form__ancho">

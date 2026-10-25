@@ -9,9 +9,13 @@ export interface PermisosCxp {
   editar: boolean;
   eliminar: boolean;
   pagar: boolean;
+  /** Excluir un documento (crear regla). */
+  excluir: boolean;
+  /** Quitar una exclusión (eliminar regla). */
+  quitar: boolean;
 }
 
-const VACIO: PermisosCxp = { cargado: false, crear: false, editar: false, eliminar: false, pagar: false };
+const VACIO: PermisosCxp = { cargado: false, crear: false, editar: false, eliminar: false, pagar: false, excluir: false, quitar: false };
 
 /**
  * Qué botones mostrar. Es solo UX: la base de datos vuelve a exigir cada permiso en cada RPC,
@@ -35,8 +39,10 @@ export function usePermisosCxp(supabase: SupabaseClient, organizacionId: string)
       pedir('cxp', 'editar'),
       pedir('cxp', 'eliminar'),
       pedir('cxp_pagos', 'editar'),
-    ]).then(([crear, editar, eliminar, pagar]) => {
-      if (vivo) setP({ cargado: true, crear, editar, eliminar, pagar });
+      pedir('cxp_reglas', 'crear'),
+      pedir('cxp_reglas', 'eliminar'),
+    ]).then(([crear, editar, eliminar, pagar, excluir, quitar]) => {
+      if (vivo) setP({ cargado: true, crear, editar, eliminar, pagar, excluir, quitar });
     });
     return () => {
       vivo = false;

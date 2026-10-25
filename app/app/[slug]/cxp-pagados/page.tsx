@@ -15,9 +15,11 @@ export default async function CxpPagadosPage({ params }: { params: Promise<{ slu
 
   return (
     <main className="ag-page">
-      <CxpTabs slug={slug} activa="pagados" verCartera={ctx.permisos.cxp} verPagados={ctx.permisos.cxpPagos} />
+      <CxpTabs slug={slug} activa="pagados" permisos={ctx.permisos} />
       <CxpCartera
         organizacionId={ctx.organizacion.id}
+        empresaNombre={ctx.organizacion.nombre}
+        usuarioNombre={ctx.nombreUsuario}
         estado="pagado"
         titulo="Cuentas pagadas"
         descripcion="Documentos marcados como pagados, con la fecha y quién los pagó."
