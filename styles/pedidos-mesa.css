@@ -108,3 +108,28 @@
 .pm-grupo td { font-weight: 600; background-color: var(--color-surface-muted); }
 .pm-mensaje { margin: 0; padding: 0.75rem; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono, monospace); font-size: 0.8125rem;
   background-color: var(--color-surface-muted); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
+
+/* ---- celda de oferta con costo editable dentro ---- */
+.pm-celda2 { display: flex; flex-direction: column; gap: 0.25rem; min-width: 8.5rem; }
+.pm-costo { width: 100%; font-variant-numeric: tabular-nums; font-weight: 600; }
+.pm-matriz td { vertical-align: top; }
+
+/* ---- cabecera compacta de la mesa (una sola, sin duplicados) ---- */
+.pm-cabecera { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin: 0 0 0.25rem; }
+.pm-cabecera__titulo { font-size: 1.125rem; }
+.pm-cabecera--sub { padding-bottom: 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--color-border-subtle); }
+.pm-cabecera--sub .pm-etapas-lista { margin: 0; }
+.pm-cabecera--sub .pm-etapas-lista li { padding: 0 0.5rem; font-size: 0.75rem; }
+
+/* ---- herramientas ordenadas, celdas compactas, aire entre secciones ---- */
+.pm-herramientas { display: grid; gap: 0.5rem; margin-bottom: 0.75rem; }
+.pm-herramientas__fila { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.625rem; }
+.pm-herramientas__titulo { font-size: 0.8125rem; font-weight: 600; color: var(--color-text-muted); }
+.pm-campo { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; color: var(--color-text-muted); }
+.pm-datos { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.375rem; font-size: 0.75rem; color: var(--color-text-subtle); }
+.pm-seccion { margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.pm-seccion:first-child { margin-top: 0; }
+.pm-celda2 { gap: 0.25rem; }
+
+.pm-notas { margin: 0 0 0.75rem; }
+.pm-notas > summary { cursor: pointer; font-weight: 600; padding: 0.375rem 0; }

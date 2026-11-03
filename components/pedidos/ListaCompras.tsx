@@ -9,6 +9,7 @@ import { ESTADO_COMPRA, numeroCompra, type CompraDetalle } from '@/components/pe
 import { resumenCompra, siguientePaso } from '@/components/pedidos/reglas';
 import { Badge, Modal, Vacio, textoError } from '@/components/pedidos/ui';
 import CompraAutomatica from '@/components/pedidos/CompraAutomatica';
+import TablaExcel from '@/components/TablaExcel';
 
 /** Detalle de las compras de la organización (en curso, o todas) para listarlas y calcular su avance. */
 export function useComprasDetalle(supabase: SupabaseClient, organizacionId: string, soloCurso: boolean) {
@@ -33,11 +34,22 @@ export default function ListaCompras({
   supabase: SupabaseClient; organizacionId: string; permisos: PermisosPedidos; onAbrir: (id: string) => void; onIrANecesidades: () => void;
 }) {
   const [ver, setVer] = useState<'curso' | 'todas'>('curso');
-  const { compras, error, cargando } = useComprasDetalle(supabase, organizacionId, ver === 'curso');
+  const { compras, error, cargando, recargar: refrescar } = useComprasDetalle(supabase, organizacionId, ver === 'curso');
   const [nueva, setNueva] = useState(false);
-  const [auto, setAuto] = useState<null | 'linea' | 'proveedor'>(null);
+  const [auto, setAuto] = useState<null | 'proveedor'>(null);
   const [titulo, setTitulo] = useState('');
   const [errorNueva, setErrorNueva] = useState('');
+
+  async function copiar(c: CompraDetalle) {
+    const { data, error: e } = await supabase.rpc('compra_copiar', { p_org: organizacionId, p_compra: c.compra.id, p_titulo: null, p_con_asignaciones: true });
+    if (e) return setErrorNueva(textoError(e));
+    onAbrir(String(data));
+  }
+  async function eliminar(c: CompraDetalle) {
+    if (!window.confirm(`¿Eliminar la compra ${numeroCompra(c.compra.numero)} (${c.compra.titulo})? Sus productos y agotados quedan libres para otra compra.`)) return;
+    const { error: e } = await supabase.rpc('compra_eliminar', { p_org: organizacionId, p_compra: c.compra.id });
+    if (e) setErrorNueva(textoError(e)); else { setErrorNueva(''); refrescar(); }
+  }
 
   async function crearVacia() {
     const { data, error: e } = await supabase.rpc('compra_crear', { p_org: organizacionId, p_titulo: titulo, p_items: null, p_proveedores: null });
@@ -56,8 +68,7 @@ export default function ListaCompras({
           {permisos.crear && (
             <>
               <button type="button" className="ui-btn ui-btn--sm" onClick={() => { setErrorNueva(''); setNueva(true); }}>+ Compra vacía</button>
-              <button type="button" className="ui-btn ui-btn--sm" onClick={() => setAuto('linea')}>+ Compra por línea</button>
-              <button type="button" className="ui-btn ui-btn--sm" onClick={() => setAuto('proveedor')}>+ Compra por proveedor</button>
+              <button type="button" className="ui-btn ui-btn--sm" onClick={() => setAuto('proveedor')}>+ Compra por proveedor o línea</button>
             </>
           )}
           <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={onIrANecesidades}>Crear desde agotados</button>
@@ -69,18 +80,18 @@ export default function ListaCompras({
           <option value="curso">En curso</option><option value="todas">Todas (incluye cerradas)</option>
         </select>
       </div>
-      {error && <p className="mod-error">{error}</p>}
+      {(error || errorNueva) && <p className="mod-error">{error || errorNueva}</p>}
 
       {!cargando && compras.length === 0 ? (
         <Vacio titulo="No hay compras" texto="Crea una a partir de los agotados pendientes, o una vacía, por línea o por proveedor.">
           <button type="button" className="ui-btn ui-btn--primary" onClick={onIrANecesidades}>Ver agotados por atender</button>
         </Vacio>
       ) : (
-        <div className="mod-scroll">
+        <TablaExcel clave="pedidos-compras" etiqueta="Tabla de compras">
           <table className="mod-table">
             <thead>
               <tr>
-                <th>N°</th><th>Título</th><th>Estado</th><th>Productos</th><th>Asignados</th><th>Proveedores</th><th>Decidido</th><th>Siguiente paso</th><th>Creada</th>
+                <th>N°</th><th>Título</th><th>Estado</th><th>Productos</th><th>Asignados</th><th>Proveedores</th><th>Decidido</th><th>Siguiente paso</th><th>Creada</th><th />
               </tr>
             </thead>
             <tbody>
@@ -98,16 +109,22 @@ export default function ListaCompras({
                     <td>{res.total > 0 ? pesos(res.total) : '—'}</td>
                     <td className="mod-sub">{siguientePaso(c).texto}</td>
                     <td className="mod-sub">{fecha(c.compra.creada)}</td>
+                    <td onClick={(ev) => ev.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
+                      {permisos.crear && <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" title="Copiar: mismos productos, proveedores y asignaciones, con precios del ERP" onClick={() => copiar(c)}>Copiar</button>}
+                      {permisos.editar && c.ordenes.every((o) => o.estado === 'cancelada') && (
+                        <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" title="Eliminar la compra (libera sus productos y agotados)" onClick={() => eliminar(c)}>Eliminar</button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
+        </TablaExcel>
       )}
 
       {auto && (
-        <CompraAutomatica modo={auto} supabase={supabase} organizacionId={organizacionId}
+        <CompraAutomatica supabase={supabase} organizacionId={organizacionId}
           onCerrar={() => setAuto(null)} onCreada={(id) => { setAuto(null); onAbrir(id); }} />
       )}
       {nueva && (

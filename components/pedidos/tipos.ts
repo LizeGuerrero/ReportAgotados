@@ -15,6 +15,12 @@ export interface ProveedorCompra {
   flete_gratis_desde: number | null;
   flete_estandar: number | null;
   dias_tipicos: number | null;
+  /** Flete que cotizó el proveedor para esta compra (0 = sin flete). Nulo = según sus condiciones. */
+  flete_cotizado: number | null;
+  contacto: string | null;
+  telefono: string | null;
+  whatsapp: string | null;
+  correo: string | null;
 }
 
 export interface OfertaCompra {
@@ -48,6 +54,8 @@ export interface LineaCompra {
   iva: number | null;
   cantidad: number;
   ordenada: boolean;
+  /** Falso si la compra se armó sin cantidad (para cotizar): hay que confirmarla antes de emitir. */
+  cantidad_confirmada: boolean;
   /** Cuántos agotados de las sedes atiende esta línea (0 = producto agregado por Compras). */
   necesidades: number;
   sedes: { sede: string; cantidad: number | null; nota: string | null }[];
@@ -131,6 +139,10 @@ export interface OrdenDetalle {
   estado: 'emitida' | 'enviada' | 'cancelada' | 'pendiente';
   proveedor_id: number;
   proveedor: string;
+  proveedor_contacto: string | null;
+  proveedor_telefono: string | null;
+  proveedor_whatsapp: string | null;
+  proveedor_correo: string | null;
   compra_id: string | null;
   compra_numero: number | null;
   compra_titulo: string | null;

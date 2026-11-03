@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { SortIcon } from '@/components/ui/icons';
-import type { AjusteTexto, ColumnaHoja, GrupoHoja, PrefsHoja } from './tipos';
+import { copiaEnteraDeSeleccion } from '../copiado';
+import { aplicarOrden, type AjusteTexto, type Alineacion, type ColumnaHoja, type GrupoHoja, type ModoCopiado, type PrefsHoja } from './tipos';
 
 const ANCHO_CHECK = 56;
 const MIN_POR_DEFECTO = 60;
@@ -41,6 +42,8 @@ interface Props<T> {
   alCentinela?: () => void;
   /** Cuando cambia este valor (filtros, orden, página) la tabla vuelve arriba. */
   reinicio?: string;
+  /** Cómo se copian los valores en pesos al copiar (Ctrl+C) dentro de la tabla. */
+  modoCopiado?: ModoCopiado;
 }
 
 /**
@@ -67,6 +70,7 @@ export default function HojaTabla<T>({
   hayMas = false,
   alCentinela,
   reinicio,
+  modoCopiado = 'moneda',
 }: Props<T>) {
   const [vivo, setVivo] = useState<{ clave: string; w: number } | null>(null);
   const contenedor = useRef<HTMLDivElement>(null);
@@ -76,7 +80,8 @@ export default function HojaTabla<T>({
   const contraido = (g: string) => prefs.contraidos.includes(g);
 
   // Columnas que se ven: las que el usuario no ocultó y, en un grupo contraído, solo la principal.
-  const visibles = columnas.filter((c) => !prefs.ocultas.includes(c.clave) && (!contraido(c.grupo) || c.resumen));
+  const ordenadas = aplicarOrden(columnas, prefs.orden);
+  const visibles = ordenadas.filter((c) => !prefs.ocultas.includes(c.clave) && (!contraido(c.grupo) || c.resumen));
 
   // Columnas fijas a la izquierda: la casilla de selección y las primeras N columnas.
   const nFijas = Math.min(prefs.congelar, visibles.length);
@@ -88,6 +93,18 @@ export default function HojaTabla<T>({
   });
   const ultimaFija = nFijas > 0 ? visibles[nFijas - 1].clave : null;
 
+  // Columnas fijas a la derecha: las que eligió el usuario (junto a Acciones, que siempre queda fija al final).
+  const derecha: Record<string, number> = {};
+  let acumDer = acciones ? anchoAcciones : 0;
+  let primeraFijaDer: string | null = null;
+  for (let i = visibles.length - 1; i >= 0; i--) {
+    const c = visibles[i];
+    if (!prefs.fijasDer.includes(c.clave) || izquierda[c.clave] !== undefined) continue;
+    derecha[c.clave] = acumDer;
+    acumDer += anchoDe(c);
+    primeraFijaDer = c.clave;
+  }
+
   const anchoTotal = (seleccion ? ANCHO_CHECK : 0) + visibles.reduce((s, c) => s + anchoDe(c), 0) + (acciones ? anchoAcciones : 0);
   const nColumnas = (seleccion ? 1 : 0) + visibles.length + (acciones ? 1 : 0);
 
@@ -95,11 +112,23 @@ export default function HojaTabla<T>({
     .map((g) => ({
       g,
       visibles: visibles.filter((c) => c.grupo === g.clave),
-      todas: columnas.filter((c) => c.grupo === g.clave && !prefs.ocultas.includes(c.clave)),
+      todas: ordenadas.filter((c) => c.grupo === g.clave && !prefs.ocultas.includes(c.clave)),
     }))
     .filter((s) => s.visibles.length > 0);
 
   const ajusteDe = (c: ColumnaHoja<T>): AjusteTexto => (c.ajustable ? (prefs.ajustes[c.clave] ?? prefs.ajuste) : 'puntos');
+  const alineacionDe = (c: ColumnaHoja<T>): Alineacion => prefs.alineaciones[c.clave] ?? (c.alinear === 'der' ? 'der' : 'izq');
+
+  // Con «entero» activo, Ctrl+C dentro de la tabla deja los valores en pesos como números sin formato.
+  function alCopiar(e: React.ClipboardEvent) {
+    if (modoCopiado !== 'entero') return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const nuevo = copiaEnteraDeSeleccion(sel);
+    if (nuevo === null) return;
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', nuevo);
+  }
 
   function alternarGrupo(clave: string) {
     const contraidos = contraido(clave) ? prefs.contraidos.filter((x) => x !== clave) : [...prefs.contraidos, clave];
@@ -186,12 +215,19 @@ export default function HojaTabla<T>({
     seleccion.alternar(f, e.shiftKey);
   }
 
-  const estiloFijo = (c: ColumnaHoja<T>) => (izquierda[c.clave] !== undefined ? { left: izquierda[c.clave] } : undefined);
+  const copiaDe = (c: ColumnaHoja<T>, f: T) => {
+    const v = c.copia?.(f);
+    return v === null || v === undefined ? undefined : String(Math.sign(v) * Math.round(Math.abs(v)) || 0);
+  };
+  const estiloFijo = (c: ColumnaHoja<T>) =>
+    izquierda[c.clave] !== undefined ? { left: izquierda[c.clave] } : derecha[c.clave] !== undefined ? { right: derecha[c.clave] } : undefined;
   const claseColumna = (c: ColumnaHoja<T>, extra = '') =>
     [
       c.alinear === 'der' ? 'cxp-num' : '',
-      izquierda[c.clave] !== undefined ? 'cxp-hoja__cong' : '',
+      `al-${alineacionDe(c)}`,
+      izquierda[c.clave] !== undefined || derecha[c.clave] !== undefined ? 'cxp-hoja__cong' : '',
       c.clave === ultimaFija ? 'is-ultima' : '',
+      c.clave === primeraFijaDer ? 'is-primera-der' : '',
       extra,
     ]
       .filter(Boolean)
@@ -207,6 +243,7 @@ export default function HojaTabla<T>({
       aria-label={etiqueta}
       aria-busy={cargando}
       tabIndex={0}
+      onCopy={alCopiar}
     >
       <table className="cxp-hoja__tabla" style={{ width: anchoTotal }}>
         <colgroup>
@@ -318,6 +355,7 @@ export default function HojaTabla<T>({
                   className={claseColumna(c, `aj-${ajusteDe(c)}`)}
                   style={{ ...estiloFijo(c), ...c.estiloCelda?.(f) }}
                   title={c.tooltip?.(f) ?? undefined}
+                  data-copia={copiaDe(c, f)}
                 >
                   {c.render(f)}
                 </td>

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import TablaExcel from '@/components/TablaExcel';
+import SelectorLinea from '@/components/SelectorLinea';
 import { useTiempoReal } from '@/components/useTiempoReal';
 import type { PermisosPedidos } from '@/components/pedidos/usePermisosPedidos';
 import { useAjustesPedidos } from '@/components/pedidos/ajustes';
@@ -49,7 +51,7 @@ export default function Necesidades({
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [cant, setCant] = useState<Record<number, string>>({});
   const [revision, setRevision] = useState<Record<number, string[]>>({});
-  const [dialogo, setDialogo] = useState<null | 'compra' | 'agregar' | 'descartar'>(null);
+  const [dialogo, setDialogo] = useState<null | 'compra' | 'agregar' | 'descartar' | 'directa'>(null);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -101,8 +103,12 @@ export default function Necesidades({
     const t = cant[n.item_id];
     return t !== undefined && t.trim() !== '' ? numeroDeTexto(t) : (n.cantidad_sugerida ?? undefined);
   };
+  // Sin cantidad también se puede cotizar: la compra queda "por confirmar" y se exige antes de emitir la orden.
   const sinCantidad = marcadas.filter((n) => { const c = cantidadDe(n); return c === undefined || c <= 0; });
-  const itemsSeleccion = () => marcadas.map((n) => ({ item_id: n.item_id, cantidad: cantidadDe(n) }));
+  const itemsSeleccion = () => marcadas.map((n) => {
+    const c = cantidadDe(n);
+    return c !== undefined && c > 0 ? { item_id: n.item_id, cantidad: c } : { item_id: n.item_id };
+  });
 
   const grupos = useMemo(() => {
     if (!ajustes.agruparNecesidades) return [{ titulo: '', filas }];
@@ -120,11 +126,11 @@ export default function Necesidades({
     const pend = n.estado === 'pendiente';
     const est = ESTADO[n.estado] ?? { texto: n.estado, tono: 'gris' as Tono };
     const c = cantidadDe(n);
-    const falta = sel.has(clave(n)) && (c === undefined || c <= 0);
+    const falta = false;
     return (
       <tr key={clave(n)} className={sel.has(clave(n)) ? 'is-selected is-clickable' : pend ? 'is-clickable' : ''} onClick={() => alternar(n)}>
         <td className="mod-check" onClick={(e) => e.stopPropagation()}>
-          <input type="checkbox" disabled={!pend} checked={sel.has(clave(n))} onChange={() => alternar(n)} aria-label={`Seleccionar ${n.nombre_base}`} />
+          <input type="checkbox" tabIndex={-1} disabled={!pend} checked={sel.has(clave(n))} onChange={() => alternar(n)} aria-label={`Seleccionar ${n.nombre_base}`} />
         </td>
         <td><b>{idVisible(n.item_id, false, n.codigo)}</b><span className="pm-chico">{n.linea ?? 'Sin línea'}</span></td>
         <td>
@@ -139,7 +145,16 @@ export default function Necesidades({
                 className="ui-input ui-input--sm" style={{ width: 90, borderColor: falta ? 'var(--color-danger, #b91c1c)' : undefined }}
                 inputMode="decimal" value={cant[n.item_id] ?? (n.cantidad_sugerida !== null ? String(n.cantidad_sugerida) : '')}
                 placeholder="Cantidad" aria-label={`Cantidad a comprar de ${n.nombre_base}`} aria-invalid={falta}
+                data-cant={n.item_id}
                 onChange={(e) => setCant({ ...cant, [n.item_id]: e.target.value })}
+                onKeyDown={(e) => {
+                  const ids = pendientes.map((x) => x.item_id);
+                  const i = ids.indexOf(n.item_id);
+                  const ir = (k: number) => { const id = ids[i + k]; if (id !== undefined) document.querySelector<HTMLInputElement>(`input[data-cant="${id}"]`)?.focus(); };
+                  if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); ir(1); }
+                  else if (e.key === 'ArrowUp') { e.preventDefault(); ir(-1); }
+                }}
+                onFocus={(e) => e.currentTarget.select()}
               />
               <span className="pm-chico">
                 {n.unidad_medida ?? ''}{n.cantidad_sugerida === null ? ' · las sedes no sugirieron cantidad' : n.sedes.length > 1 ? ` · suma de ${n.sedes.length} sedes` : ''}
@@ -171,16 +186,14 @@ export default function Necesidades({
       </p>
 
       <div className="mod-toolbar mod-toolbar--top">
+        <div className="ag-search" style={{ flex: '1 1 280px', maxWidth: 420 }}>
+          <input className="ui-input" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por código, nombre o nota" aria-label="Buscar" />
+        </div>
+        <SelectorLinea lineas={lineas} valor={linea} onCambio={(v) => { setLinea(v); setPagina(0); }} />
         <select className="ui-input ui-input--sm mod-auto" value={ajustes.verNecesidades} aria-label="Estado"
           onChange={(e) => { cambiar({ verNecesidades: e.target.value as 'pendiente' | 'todas' }); setPagina(0); }}>
           <option value="pendiente">Solo pendientes</option><option value="todas">Todas</option>
         </select>
-        <select className="ui-input ui-input--sm mod-auto" value={linea} aria-label="Línea" onChange={(e) => { setLinea(e.target.value); setPagina(0); }}>
-          <option value="">Todas las líneas</option>
-          {lineas.map((l) => <option key={l}>{l}</option>)}
-        </select>
-        <input className="ui-input ui-input--sm mod-auto" style={{ minWidth: 260 }} value={texto} onChange={(e) => setTexto(e.target.value)}
-          placeholder="Buscar por código, nombre o nota" aria-label="Buscar" />
         <label className="mod-flex mod-gap-1 mod-center mod-text">
           <input type="checkbox" checked={ajustes.agruparNecesidades} onChange={(e) => cambiar({ agruparNecesidades: e.target.checked })} /> Agrupar por línea
         </label>
@@ -192,11 +205,14 @@ export default function Necesidades({
       {marcadas.length > 0 && (
         <div className="mod-bulkbar" role="region" aria-label="Acciones sobre la selección">
           <span className="mod-semibold">{marcadas.length} seleccionada(s)</span>
-          {permisos.crear && <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => setDialogo('compra')}>Crear compra con la selección</button>}
+          {permisos.crear && <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => setDialogo('compra')} title="Arma la compra para cotizar, con o sin cantidad">Cotizar (crear compra)</button>}
+          {permisos.ganadorEditar && permisos.crear && (
+            <button type="button" className="ui-btn ui-btn--sm" onClick={() => setDialogo('directa')} title="Ya sabes qué pedir y los precios son los del ERP: arma y emite la orden sin cotizar">Comprar directo</button>
+          )}
           {permisos.editar && <button type="button" className="ui-btn ui-btn--sm" onClick={() => setDialogo('agregar')}>Agregar a una compra existente</button>}
           {permisos.editar && <button type="button" className="ui-btn ui-btn--sm ui-btn--danger" onClick={() => setDialogo('descartar')}>Descartar</button>}
           <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={() => setSel(new Set())}>Quitar selección</button>
-          {sinCantidad.length > 0 && <span className="mod-error">Falta la cantidad de {sinCantidad.length} producto(s).</span>}
+          {sinCantidad.length > 0 && <span className="mod-sub">{sinCantidad.length} sin cantidad: se cotizan igual y la confirmas antes de emitir.</span>}
         </div>
       )}
 
@@ -204,12 +220,12 @@ export default function Necesidades({
         <Vacio titulo={ajustes.verNecesidades === 'pendiente' ? 'No hay agotados pendientes por atender' : 'No hay agotados'}
           texto="Aparecen aquí cuando una sede reporta un agotado en el módulo Agotados." />
       ) : (
-        <div className="mod-scroll">
+        <TablaExcel clave="pedidos-agotados" etiqueta="Tabla de agotados por atender">
           <table className="mod-table">
             <thead>
               <tr>
                 <th className="mod-check">
-                  <input type="checkbox" checked={todasMarcadas} disabled={pendientes.length === 0} onChange={(e) => marcarTodas(e.target.checked)}
+                  <input type="checkbox" tabIndex={-1} checked={todasMarcadas} disabled={pendientes.length === 0} onChange={(e) => marcarTodas(e.target.checked)}
                     aria-label="Seleccionar todos los pendientes visibles" />
                 </th>
                 <th>Ítem</th><th>Producto</th><th>Cantidad a comprar</th><th>Reportado en</th><th>Fecha</th><th>Estado</th>
@@ -221,7 +237,7 @@ export default function Necesidades({
               ))}
             </tbody>
           </table>
-        </div>
+        </TablaExcel>
       )}
 
       <div className="mod-pager">
@@ -238,6 +254,10 @@ export default function Necesidades({
       {dialogo === 'agregar' && (
         <AgregarAExistente supabase={supabase} organizacionId={organizacionId} cantidad={marcadas.length} items={itemsSeleccion()} sinCantidad={sinCantidad.length}
           onCerrar={() => setDialogo(null)} onAgregadas={(id) => { setSel(new Set()); setDialogo(null); onAbrirCompra(id); }} />
+      )}
+      {dialogo === 'directa' && (
+        <CompraDirecta supabase={supabase} organizacionId={organizacionId} marcadas={marcadas} cantidadDe={cantidadDe}
+          onCerrar={() => setDialogo(null)} onHecha={(id, msg) => { setSel(new Set()); setDialogo(null); setAviso(msg); onAbrirCompra(id); }} />
       )}
       {dialogo === 'descartar' && (
         <Descartar supabase={supabase} organizacionId={organizacionId} ids={marcadas.map((n) => n.item_id)}
@@ -277,18 +297,18 @@ function CrearCompra({
       <p className="mod-text mod-mt-0">Los agotados del mismo ítem en varias sedes se suman en un solo producto. Luego eliges a qué proveedores consultar.</p>
       <div className="pm-lista mod-mb-2" style={{ maxHeight: 180 }}>
         <table className="mod-table"><tbody>
-          {marcadas.map((n) => <tr key={n.item_id}><td>{n.nombre_base}</td><td>{cantidadDe(n) ?? <span className="mod-error">sin cantidad</span>} {n.unidad_medida ?? ''}</td></tr>)}
+          {marcadas.map((n) => <tr key={n.item_id}><td>{n.nombre_base}</td><td>{cantidadDe(n) ?? <span className="mod-sub">por confirmar</span>} {n.unidad_medida ?? ''}</td></tr>)}
         </tbody></table>
       </div>
       <label className="ui-field">
         <span className="ui-label">Título de la compra *</span>
         <input className="ui-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} autoFocus />
       </label>
-      {sinCantidad > 0 && <p className="mod-error">Escribe la cantidad de {sinCantidad} producto(s) antes de crear la compra.</p>}
+      {sinCantidad > 0 && <p className="mod-sub">{sinCantidad} producto(s) sin cantidad: se cotizan igual y la confirmas en la compra antes de emitir la orden.</p>}
       {error && <p className="mod-error">{error}</p>}
       <div className="pm-modal__acciones">
         <button type="button" className="ui-btn" onClick={onCerrar}>Cancelar</button>
-        <button type="button" className="ui-btn ui-btn--primary" disabled={ocupado || sinCantidad > 0 || titulo.trim().length < 3} onClick={crear}>Crear y abrir</button>
+        <button type="button" className="ui-btn ui-btn--primary" disabled={ocupado || titulo.trim().length < 3} onClick={crear}>Crear y abrir</button>
       </div>
     </Modal>
   );
@@ -315,12 +335,11 @@ function AgregarAExistente({
   }
   return (
     <Modal titulo={`Agregar ${cantidad} agotado(s) a una compra`} onCerrar={onCerrar}>
-      {sinCantidad > 0 && <p className="mod-error">Escribe la cantidad de {sinCantidad} producto(s) antes de agregarlos.</p>}
       {abiertas && abiertas.length === 0 && <p className="mod-text">No hay compras abiertas.</p>}
       {error && <p className="mod-error">{error}</p>}
       <div style={{ display: 'grid', gap: 8 }}>
         {(abiertas ?? []).map((c) => (
-          <button key={c.id} type="button" className="ui-btn" style={{ textAlign: 'left' }} disabled={sinCantidad > 0} onClick={() => agregar(c)}>
+          <button key={c.id} type="button" className="ui-btn" style={{ textAlign: 'left' }} onClick={() => agregar(c)}>
             <b>{numeroCompra(c.numero)}</b> · {c.titulo} <span className="mod-sub">({c.productos} productos)</span>
           </button>
         ))}
@@ -364,6 +383,103 @@ function Descartar({
       <div className="pm-modal__acciones">
         <button type="button" className="ui-btn" onClick={onCerrar}>Cancelar</button>
         <button type="button" className="ui-btn ui-btn--danger-solid" disabled={respuesta === 'no_se_pide' && !motivo.trim()} onClick={aplicar}>Aplicar</button>
+      </div>
+    </Modal>
+  );
+}
+
+interface ProvOpcion { proveedor_id: number; nombre: string; precio: number | null }
+
+/**
+ * Compra directa: ya se sabe qué se pide y el precio es el del ERP. Se elige proveedor por producto (se sugiere el
+ * preferido o el más barato del ERP) y se arma la compra, se asigna y —si se quiere— se emite la orden de una vez.
+ */
+function CompraDirecta({
+  supabase, organizacionId, marcadas, cantidadDe, onCerrar, onHecha,
+}: {
+  supabase: SupabaseClient; organizacionId: string; marcadas: Necesidad[]; cantidadDe: (n: Necesidad) => number | undefined;
+  onCerrar: () => void; onHecha: (compraId: string, mensaje: string) => void;
+}) {
+  const [opciones, setOpciones] = useState<Record<number, ProvOpcion[]>>({});
+  const [elegido, setElegido] = useState<Record<number, number>>({});
+  const [titulo, setTitulo] = useState('Compra directa');
+  const [emitir, setEmitir] = useState(true);
+  const [error, setError] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  const faltaCantidad = marcadas.filter((n) => { const c = cantidadDe(n); return c === undefined || c <= 0; });
+
+  useEffect(() => {
+    supabase.rpc('items_proveedores_erp', { p_org: organizacionId, p_items: marcadas.map((n) => n.item_id) }).then(({ data }) => {
+      const filas = (data ?? []) as { item_id: number; proveedor_id: number; proveedor: string; precio: number | null; preferido: boolean }[];
+      const nuevas: Record<number, ProvOpcion[]> = {};
+      const porDefecto: Record<number, number> = {};
+      for (const n of marcadas) {
+        const l = filas.filter((x) => x.item_id === n.item_id);
+        nuevas[n.item_id] = l.map((x) => ({ proveedor_id: x.proveedor_id, nombre: x.proveedor, precio: x.precio }));
+        const mejor = [...l].filter((x) => x.precio !== null).sort((a, b) => Number(b.preferido) - Number(a.preferido) || (a.precio ?? 0) - (b.precio ?? 0))[0];
+        if (mejor) porDefecto[n.item_id] = mejor.proveedor_id;
+      }
+      setOpciones(nuevas);
+      setElegido(porDefecto);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, organizacionId]);
+
+  const sinProveedor = marcadas.filter((n) => !elegido[n.item_id]);
+
+  async function hacer() {
+    setOcupado(true);
+    setError('');
+    const { data, error: e } = await supabase.rpc('compra_directa', {
+      p_org: organizacionId, p_titulo: titulo,
+      p_items: marcadas.map((n) => ({ item_id: n.item_id, cantidad: cantidadDe(n), proveedor_id: elegido[n.item_id] })),
+      p_emitir: emitir,
+    });
+    setOcupado(false);
+    if (e) return setError(textoError(e));
+    const r = data as { compra_id: string; emision: { error?: string; ordenes?: unknown[] } | null };
+    const msg = r.emision?.error ? `La compra quedó armada, pero no se pudo emitir: ${r.emision.error}`
+      : r.emision?.ordenes ? `Se emitieron ${r.emision.ordenes.length} orden(es).` : 'Compra armada con los precios del ERP.';
+    onHecha(r.compra_id, msg);
+  }
+
+  return (
+    <Modal titulo={`Comprar directo ${marcadas.length} producto(s)`} onCerrar={onCerrar} ancha>
+      <p className="mod-text mod-mt-0">Sin cotizar: se toma el precio del ERP de cada proveedor. Elige a quién se le compra cada producto.</p>
+      <div className="pm-lista mod-mb-2">
+        <table className="mod-table">
+          <thead><tr><th>Producto</th><th>Cantidad</th><th>Proveedor (precio ERP)</th></tr></thead>
+          <tbody>
+            {marcadas.map((n) => (
+              <tr key={n.item_id}>
+                <td>{n.nombre_base}</td>
+                <td>{cantidadDe(n) ?? <span className="mod-error">falta</span>}</td>
+                <td>
+                  <select className="ui-input ui-input--sm" value={elegido[n.item_id] ?? ''} aria-label={`Proveedor de ${n.nombre_base}`}
+                    onChange={(e) => setElegido({ ...elegido, [n.item_id]: Number(e.target.value) })}>
+                    <option value="">Elegir…</option>
+                    {(opciones[n.item_id] ?? []).map((o) => <option key={o.proveedor_id} value={o.proveedor_id}>{o.nombre}{o.precio !== null ? ` · ${o.precio.toLocaleString('es-CO')}` : ' · sin precio'}</option>)}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <label className="ui-field">
+        <span className="ui-label">Título</span>
+        <input className="ui-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+      </label>
+      <label className="mod-flex mod-gap-2 mod-center mod-mt-2">
+        <input type="checkbox" checked={emitir} onChange={(e) => setEmitir(e.target.checked)} /> Emitir las órdenes de una vez (una por proveedor)
+      </label>
+      {faltaCantidad.length > 0 && <p className="mod-error">Una compra directa necesita la cantidad de cada producto ({faltaCantidad.length} sin cantidad).</p>}
+      {error && <p className="mod-error">{error}</p>}
+      <div className="pm-modal__acciones">
+        <button type="button" className="ui-btn" onClick={onCerrar}>Cancelar</button>
+        <button type="button" className="ui-btn ui-btn--primary" disabled={ocupado || faltaCantidad.length > 0 || sinProveedor.length > 0 || titulo.trim().length < 3} onClick={hacer}>
+          {emitir ? 'Comprar y emitir' : 'Armar compra'}
+        </button>
       </div>
     </Modal>
   );

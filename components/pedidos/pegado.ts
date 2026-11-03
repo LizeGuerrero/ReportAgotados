@@ -1,62 +1,91 @@
 import type { CompraDetalle } from '@/components/pedidos/tipos';
+import type { CampoPegado, ConfigPegado } from '@/components/pedidos/ajustes';
 import { numeroDeTexto, ofertaDe } from '@/components/pedidos/reglas';
 
 /**
- * PEGAR PRECIOS: las cotizaciones suelen llegar como texto (correo, WhatsApp) o como filas de Excel. Esto las
- * interpreta y las empata con los productos de la compra para registrar muchas ofertas de una vez.
- * Formato: una línea por producto. Primero cómo se identifica (referencia del proveedor, código interno o
- * nombre), luego el costo unitario SIN IVA y, opcional, los días de entrega:   TL-12   38.000   3
+ * PEGAR PRECIOS: las cotizaciones llegan como texto (correo, WhatsApp) o filas de Excel. El usuario decide cómo se
+ * separan las columnas (tabulador, espacio, coma, punto y coma, barra o el carácter que prefiera) y qué es cada
+ * columna: producto (referencia, código o nombre), costo sin IVA, días, observación, o la referencia del proveedor
+ * (que actualiza el catálogo). Una línea "flete 25000" fija el flete que cotizó el proveedor.
  */
 export interface FilaPegada {
   original: string;
-  clave: string;
-  costo?: number;
-  dias?: number;
+  celdas: string[];
   lineaId?: string;
   producto?: string;
-  estado: 'ok' | 'sin_coincidencia' | 'sin_costo' | 'repetida';
+  costo?: number;
+  dias?: number;
+  observacion?: string;
+  referencia?: string;
+  estado: 'ok' | 'sin_coincidencia' | 'sin_costo' | 'repetida' | 'sin_producto';
 }
+export interface ResultadoPegado { filas: FilaPegada[]; flete?: number; columnas: number }
 
-const normalizar = (t: string) =>
-  t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const normalizar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-/** Separa una línea en identificador + números finales (costo y, opcional, días). */
-function partir(linea: string): { clave: string; numeros: string[] } {
-  const trozos = linea.includes('\t') || linea.includes(';') || linea.includes('|')
-    ? linea.split(/[\t;|]+/).map((x) => x.trim()).filter(Boolean)
-    : linea.trim().split(/\s{2,}/).map((x) => x.trim()).filter(Boolean);
-  const partes = trozos.length > 1 ? trozos : linea.trim().split(/\s+/);
-  const numeros: string[] = [];
-  while (partes.length > 1 && numeros.length < 2 && numeroDeTexto(partes[partes.length - 1]) !== undefined) {
-    numeros.unshift(partes.pop() as string);
+export function dividirLinea(linea: string, cfg: ConfigPegado): string[] {
+  const l = linea.trim();
+  const por = (sep: string | RegExp) => l.split(sep).map((x) => x.trim());
+  switch (cfg.separador) {
+    case 'tab': return por('\t');
+    case 'coma': return por(',');
+    case 'punto_coma': return por(';');
+    case 'barra': return por('|');
+    case 'otro': return cfg.otro ? por(cfg.otro) : [l];
+    case 'espacio': return agruparEspacios(l.split(/\s+/), cfg.columnas);
+    default: {
+      if (l.includes('\t')) return por('\t');
+      if (l.includes(';')) return por(';');
+      if (l.includes('|')) return por('|');
+      if (/\s{2,}/.test(l)) return por(/\s{2,}/);
+      return agruparEspacios(l.split(/\s+/), cfg.columnas);
+    }
   }
-  return { clave: partes.join(' ').trim(), numeros };
 }
 
-export function analizarPegado(d: CompraDetalle, proveedorId: number, texto: string): FilaPegada[] {
+/** Con espacios, un nombre puede tener varias palabras: el primer campo toma las que sobren. */
+function agruparEspacios(tokens: string[], columnas: CampoPegado[]): string[] {
+  const resto = columnas.length - 1;
+  if (tokens.length > columnas.length && resto >= 0) return [tokens.slice(0, tokens.length - resto).join(' '), ...tokens.slice(tokens.length - resto)];
+  return tokens;
+}
+
+export function analizarPegado(d: CompraDetalle, proveedorId: number, texto: string, cfg: ConfigPegado): ResultadoPegado {
+  const lineas = texto.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  if (cfg.primeraEsEncabezado) lineas.shift();
   const filas: FilaPegada[] = [];
   const usadas = new Set<string>();
-  for (const original of texto.split(/\r?\n/).map((x) => x.trim()).filter(Boolean)) {
-    const { clave, numeros } = partir(original);
-    const fila: FilaPegada = { original, clave, estado: 'sin_coincidencia' };
-    const k = normalizar(clave);
+  let flete: number | undefined;
+  let columnas = 0;
 
-    const candidatas = d.lineas.filter((l) => !l.ordenada).map((l) => {
-      const refs = (ofertaDe(l, proveedorId)?.referencia ?? '').split('/').map((x) => x.trim()).filter(Boolean);
-      return {
-        l,
-        exactas: [...refs, l.codigo, l.nombre].filter((x): x is string => !!x).map(normalizar),
-        nombres: [l.nombre].map(normalizar),
-      };
-    });
-    let hallada = candidatas.find((x) => k !== '' && x.exactas.includes(k));
-    if (!hallada && k.length >= 3) hallada = candidatas.find((x) => x.nombres.some((n) => n.includes(k) || k.includes(n)));
+  for (const original of lineas) {
+    const celdas = dividirLinea(original, cfg);
+    columnas = Math.max(columnas, celdas.length);
+    const primera = normalizar(celdas[0] ?? '');
+    if (primera === 'flete' || primera.startsWith('flete ')) {
+      const num = celdas.slice(1).map((x) => numeroDeTexto(x)).find((x) => x !== undefined) ?? numeroDeTexto(primera.replace('flete', ''));
+      if (num !== undefined) { flete = num; continue; }
+    }
+    const campo = (c: CampoPegado) => { const i = cfg.columnas.indexOf(c); return i >= 0 ? (celdas[i] ?? '').trim() : ''; };
+    const fila: FilaPegada = { original, celdas, estado: 'sin_producto' };
+    const clave = normalizar(campo('producto'));
+    if (clave === '') { filas.push(fila); continue; }
 
+    const candidatas = d.lineas.filter((l) => !l.ordenada).map((l) => ({
+      l,
+      exactas: [...(ofertaDe(l, proveedorId)?.referencia ?? '').split('/').map((x) => x.trim()), l.codigo ?? '', l.nombre].filter(Boolean).map(normalizar),
+    }));
+    let hallada = candidatas.find((x) => x.exactas.includes(clave));
+    if (!hallada && clave.length >= 3) hallada = candidatas.find((x) => normalizar(x.l.nombre).includes(clave) || clave.includes(normalizar(x.l.nombre)));
+
+    fila.estado = 'sin_coincidencia';
     if (hallada) {
       fila.lineaId = hallada.l.id;
       fila.producto = hallada.l.nombre;
-      const costo = numeros.length > 0 ? numeroDeTexto(numeros[0]) : undefined;
-      const dias = numeros.length > 1 ? numeroDeTexto(numeros[1]) : undefined;
+      const costo = campo('costo') ? numeroDeTexto(campo('costo')) : undefined;
+      const dias = campo('dias') ? numeroDeTexto(campo('dias')) : undefined;
+      fila.observacion = campo('observacion') || undefined;
+      fila.referencia = campo('referencia') || undefined;
       if (costo === undefined || costo <= 0) fila.estado = 'sin_costo';
       else if (usadas.has(hallada.l.id)) fila.estado = 'repetida';
       else {
@@ -68,5 +97,5 @@ export function analizarPegado(d: CompraDetalle, proveedorId: number, texto: str
     }
     filas.push(fila);
   }
-  return filas;
+  return { filas, flete, columnas };
 }

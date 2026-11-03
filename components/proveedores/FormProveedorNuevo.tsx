@@ -18,7 +18,7 @@ export default function FormProveedorNuevo({
   onCreado: (id: number, nombre: string) => void;
   onCancelar?: () => void;
 }) {
-  const [v, setV] = useState({ tipo_documento: 'NIT', numero_documento: '', nombre: '', contacto: '', telefono: '', email: '' });
+  const [v, setV] = useState({ tipo_documento: 'NIT', numero_documento: '', nombre: '', contacto: '', telefono: '', whatsapp: '', email: '' });
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -47,8 +47,9 @@ export default function FormProveedorNuevo({
         <input className="ui-input ui-input--sm" style={{ width: 170 }} placeholder="Número *" value={v.numero_documento}
           onChange={(e) => set('numero_documento', e.target.value)} />
         <input className="ui-input ui-input--sm mod-auto" style={{ minWidth: 280 }} placeholder="Nombre *" value={v.nombre} onChange={(e) => set('nombre', e.target.value)} />
-        <input className="ui-input ui-input--sm" style={{ width: 180 }} placeholder="Contacto" value={v.contacto} onChange={(e) => set('contacto', e.target.value)} />
+        <input className="ui-input ui-input--sm" style={{ width: 200 }} placeholder="Contacto (asesor comercial)" value={v.contacto} onChange={(e) => set('contacto', e.target.value)} />
         <input className="ui-input ui-input--sm" style={{ width: 150 }} placeholder="Teléfono" value={v.telefono} onChange={(e) => set('telefono', e.target.value)} />
+        <input className="ui-input ui-input--sm" style={{ width: 150 }} placeholder="WhatsApp" value={v.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} />
         <input className="ui-input ui-input--sm" style={{ width: 220 }} placeholder="Correo" value={v.email} onChange={(e) => set('email', e.target.value)} />
         <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={guardando} onClick={crear}>{guardando ? 'Guardando…' : 'Crear'}</button>
         {onCancelar && <button type="button" className="ui-btn ui-btn--sm" onClick={onCancelar}>Cancelar</button>}

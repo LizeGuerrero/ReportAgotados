@@ -52,6 +52,7 @@ SUITES=(
   "07_cxp_fase2.sql:CXP_FASE2_OK"
   "08_cxp_fase3.sql:CXP_FASE3_OK"
   "09_cxp_fase5.sql:CXP_FASE5_OK"
+  "10_cxp_preferencias.sql:CXP_PREFS_OK"
 )
 
 fallo=0

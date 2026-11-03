@@ -15,6 +15,7 @@ interface Proveedor {
   nombre: string;
   contacto: string | null;
   telefono: string | null;
+  whatsapp: string | null;
   email: string | null;
   notas: string | null;
   cobra_iva: boolean;
@@ -138,7 +139,7 @@ function TabGeneral({
 }) {
   const [v, setV] = useState({
     tipo_documento: prov.tipo_documento, numero_documento: prov.numero_documento, nombre: prov.nombre,
-    contacto: prov.contacto ?? '', telefono: prov.telefono ?? '', email: prov.email ?? '', notas: prov.notas ?? '',
+    contacto: prov.contacto ?? '', telefono: prov.telefono ?? '', whatsapp: prov.whatsapp ?? '', email: prov.email ?? '', notas: prov.notas ?? '',
   });
   const [cobraIva, setCobraIva] = useState(prov.cobra_iva);
   const [ivaPct, setIvaPct] = useState(String(Math.round(prov.iva_compra * 10000) / 100));
@@ -172,8 +173,9 @@ function TabGeneral({
         </label>
         <Campo etiqueta="Número (sin DV)" ancho={170} valor={v.numero_documento} deshabilitado={!puedeEditar} onCambio={(x) => set('numero_documento', x)} />
         <Campo etiqueta="Nombre *" ancho={320} valor={v.nombre} deshabilitado={!puedeEditar} onCambio={(x) => set('nombre', x)} />
-        <Campo etiqueta="Contacto" valor={v.contacto} deshabilitado={!puedeEditar} onCambio={(x) => set('contacto', x)} />
+        <Campo etiqueta="Contacto (asesor comercial: sale en los mensajes como {contacto})" valor={v.contacto} deshabilitado={!puedeEditar} onCambio={(x) => set('contacto', x)} />
         <Campo etiqueta="Teléfono" ancho={170} valor={v.telefono} deshabilitado={!puedeEditar} onCambio={(x) => set('telefono', x)} />
+        <Campo etiqueta="WhatsApp (para enviarle cotizaciones y órdenes)" ancho={260} valor={v.whatsapp} deshabilitado={!puedeEditar} onCambio={(x) => set('whatsapp', x)} />
         <Campo etiqueta="Correo" valor={v.email} deshabilitado={!puedeEditar} onCambio={(x) => set('email', x)} />
         <Campo etiqueta="Notas" ancho={580} multilinea valor={v.notas} deshabilitado={!puedeEditar} onCambio={(x) => set('notas', x)} />
       </div>

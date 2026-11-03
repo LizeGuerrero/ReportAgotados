@@ -24,6 +24,8 @@ export default async function OrganizacionLayout({
   if (ctx.permisos.pedidos) modulos.push({ clave: 'pedidos', texto: 'Pedidos', href: `${base}/pedidos` });
   if (ctx.permisos.items) modulos.push({ clave: 'items', texto: 'Ítems', href: `${base}/items` });
   if (ctx.permisos.proveedores) modulos.push({ clave: 'proveedores', texto: 'Proveedores', href: `${base}/proveedores` });
+  // Mensajes: una pestaña por proceso (Pedidos y Cuentas por pagar); entra quien tenga permiso de alguno.
+  if (ctx.permisos.mensajes || ctx.permisos.cxpMensajes) modulos.push({ clave: 'mensajes', texto: 'Mensajes', href: `${base}/mensajes` });
   // Cuentas por pagar: entra por la primera pantalla a la que tenga acceso.
   const rutaCxp = rutaEntradaCxp(base, ctx.permisos);
   if (rutaCxp) modulos.push({ clave: 'cxp', texto: 'Cuentas por pagar', href: rutaCxp });

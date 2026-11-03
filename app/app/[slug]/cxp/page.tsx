@@ -14,7 +14,7 @@ export default async function CxpPage({ params }: { params: Promise<{ slug: stri
   if (!ctx.permisos.cxp) return <NoAutorizado modulo="Cuentas por pagar" />;
 
   return (
-    <main className="ag-page">
+    <main className="ag-page cxp-page">
       <CxpTabs slug={slug} activa="cartera" permisos={ctx.permisos} />
       <CxpCartera
         organizacionId={ctx.organizacion.id}

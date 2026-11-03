@@ -152,8 +152,10 @@ export default function EstructurasMensajes({ organizacionId, puedeEditar }: { o
       : supabase.rpc('mensaje_variante_guardar', { p_org: organizacionId, p_tipo: tipo, p_variante: sel, p_datos: payload }),
     cargarEditor);
 
-  const restablecer = () => window.confirm('¿Volver a la estructura de fábrica de la Estándar? Se pierde la personalización.') &&
-    operar('Se restableció la estructura de fábrica.', () => supabase.rpc('mensaje_config_restablecer', { p_org: organizacionId, p_tipo: tipo }), cargarEditor);
+  const restablecer = () => window.confirm(`¿Volver a la estructura de fábrica de la Estándar de ${info.plural}? Las estructuras con nombre que heredan de ella también cambiarán en lo que no personalizaron. No afecta a las demás clases de mensaje.`) &&
+    operar('Se restableció la estructura de fábrica de la Estándar.', () => supabase.rpc('mensaje_config_restablecer', { p_org: organizacionId, p_tipo: tipo }), cargarEditor);
+  const restablecerEsta = () => window.confirm(`¿Restablecer “${nombreSel}”? Quedará igual a la Estándar. Solo cambia esta estructura.`) &&
+    operar(`“${nombreSel}” quedó igual a la Estándar.`, () => supabase.rpc('mensaje_variante_restablecer', { p_org: organizacionId, p_variante: sel }), cargarEditor);
 
   async function crear() {
     if (!nueva) return;
@@ -327,7 +329,10 @@ export default function EstructurasMensajes({ organizacionId, puedeEditar }: { o
         <>
           <div className="mod-card mod-mb-3">
             <div className="mod-semibold mod-mb-2">Textos del mensaje</div>
-            <p className="mod-sub mod-mt-0 mod-mb-2">Puedes usar {'{numero}'}, {'{proveedor}'}, {'{fecha}'} y {'{entregar_en}'}: se reemplazan por los datos reales.</p>
+            <p className="mod-sub mod-mt-0 mod-mb-2">
+              Marcadores que se reemplazan por los datos reales: {'{contacto}'} (el asesor comercial del proveedor, p. ej. “Buen día {'{contacto}'}”), {'{proveedor}'}, {'{numero}'}, {'{fecha}'}, {'{entregar_en}'}, {'{whatsapp}'}, {'{telefono}'}, {'{correo}'} y {'{usuario}'}.
+              Si el proveedor no tiene el dato, el marcador queda vacío.
+            </p>
             {(['encabezado', 'introduccion', 'pie'] as const).map((k) => {
               const etiqueta = { encabezado: 'Título (primera línea)', introduccion: 'Texto antes de los productos (opcional)', pie: 'Texto final (opcional, p. ej. condiciones de pago o despedida)' }[k];
               const difiere = !esBase && borrador[k] !== baseCfg[k];
@@ -405,7 +410,10 @@ export default function EstructurasMensajes({ organizacionId, puedeEditar }: { o
               </button>
               {sucio && <button type="button" className="ui-btn ui-btn--sm" disabled={guardando} onClick={() => setBorrador(cargada)}>Descartar cambios</button>}
               {esBase && cargada?.personalizada && (
-                <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" disabled={guardando} onClick={restablecer}>Restablecer estructura de fábrica</button>
+                <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" disabled={guardando} onClick={restablecer}>Restablecer la Estándar a fábrica</button>
+              )}
+              {!esBase && (
+                <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" disabled={guardando} onClick={restablecerEsta}>Restablecer solo esta estructura</button>
               )}
               {sucio && <span className="mod-sub">Hay cambios sin guardar; la vista previa ya los refleja.</span>}
             </div>

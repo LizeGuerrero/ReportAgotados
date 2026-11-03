@@ -9,6 +9,7 @@ import SelectorEstructura from '@/components/pedidos/Selector';
 import { fecha, pesos } from '@/components/pedidos/comun';
 import { ESTADO_ORDEN, MOTIVO, numeroCompra, numeroOrden, type OrdenDetalle } from '@/components/pedidos/tipos';
 import { Badge, Modal, Vacio, copiarTexto, textoError } from '@/components/pedidos/ui';
+import EnviarMensaje from '@/components/pedidos/EnviarMensaje';
 
 /**
  * Órdenes de compra: una por proveedor, generadas desde una compra. Aquí se envían y se les hace seguimiento.
@@ -134,7 +135,7 @@ export function OrdenCard({
 
       {abierta && (
         <div className="mod-mt-2">
-          <div className="mod-scroll mod-mb-2">
+          <div className="mod-scroll">
             <table className="mod-table">
               <thead><tr><th>Producto</th><th>Ref.</th><th>Cant.</th><th>Costo unit.</th><th>Subtotal</th><th>Por qué se eligió</th></tr></thead>
               <tbody>
@@ -148,7 +149,7 @@ export function OrdenCard({
               </tbody>
             </table>
           </div>
-          <div className="mod-flex mod-gap-2 mod-mb-2">
+          <div className="mod-flex mod-gap-2 mod-mb-2 mod-mt-2">
             <button type="button" className={interno ? 'ui-btn ui-btn--sm' : 'ui-btn ui-btn--sm ui-btn--primary'} onClick={() => setInterno(false)}>Para el proveedor</button>
             <button type="button" className={interno ? 'ui-btn ui-btn--sm ui-btn--primary' : 'ui-btn ui-btn--sm'} onClick={() => setInterno(true)}>Copia interna</button>
           </div>
@@ -159,7 +160,10 @@ export function OrdenCard({
           <div className="mod-sub mod-mb-2">{interno ? 'Copia interna: incluye datos que el proveedor no recibe.' : 'Esto es lo que recibe el proveedor, según la estructura elegida (definidas en “Mensajes”).'}</div>
           <pre className="pm-mensaje">{texto}</pre>
           <div className="mod-mt-2">
-            <button type="button" className="ui-btn ui-btn--sm" onClick={async () => setCopiado((await copiarTexto(texto)) ? 'Mensaje copiado' : 'No se pudo copiar')}>Copiar {interno ? 'copia interna' : 'mensaje'}</button>
+            <EnviarMensaje texto={texto} asunto={`Orden de compra ${numeroOrden(o.numero)}`} contacto={o.proveedor_contacto} whatsapp={o.proveedor_whatsapp}
+              telefono={o.proveedor_telefono} correo={o.proveedor_correo} deshabilitado={interno}
+              alEnviar={o.estado === 'emitida' && permisos.ganadorEditar ? () => { enviar(); } : undefined} />
+            <p className="mod-sub mod-mb-0">Al abrir WhatsApp o el correo la orden queda marcada como enviada.{o.proveedor_contacto ? ` Contacto: ${o.proveedor_contacto}.` : ''}</p>
           </div>
         </div>
       )}

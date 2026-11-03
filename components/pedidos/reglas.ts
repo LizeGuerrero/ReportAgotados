@@ -86,6 +86,7 @@ export interface ResumenCompra {
 }
 
 export function fleteDe(p: ProveedorCompra, subtotal: number): number {
+  if (typeof p.flete_cotizado === 'number') return p.flete_cotizado;
   if (p.flete_gratis_desde !== null && subtotal >= p.flete_gratis_desde) return 0;
   return p.flete_estandar ?? 0;
 }
@@ -131,7 +132,7 @@ export function resumenCompra(d: CompraDetalle): ResumenCompra {
     r.neto = r.subtotal + r.flete;
     r.cumpleMinimo = r.proveedor.pedido_minimo === null || r.subtotal >= r.proveedor.pedido_minimo;
     const umbral = r.proveedor.flete_gratis_desde;
-    if (umbral !== null && r.subtotal < umbral && (r.proveedor.flete_estandar ?? 0) > 0) r.faltaParaFleteGratis = umbral - r.subtotal;
+    if (typeof r.proveedor.flete_cotizado !== 'number' && umbral !== null && r.subtotal < umbral && (r.proveedor.flete_estandar ?? 0) > 0) r.faltaParaFleteGratis = umbral - r.subtotal;
   }
   const suma = (f: (r: ResumenProveedor) => number) => proveedores.reduce((s, r) => s + f(r), 0);
   return {
@@ -155,6 +156,9 @@ export function avisosCompra(d: CompraDetalle): Aviso[] {
   for (const l of res.incompletas) {
     const dif = l.cantidad - totalAsignado(l);
     avisos.push({ nivel: 'error', lineaId: l.id, texto: `${l.nombre}: ${dif > 0 ? `faltan ${dif} por asignar` : `se asignaron ${-dif} de más`}` });
+  }
+  for (const l of [...res.completas, ...res.incompletas]) {
+    if (!l.cantidad_confirmada) avisos.push({ nivel: 'error', lineaId: l.id, texto: `${l.nombre}: confirma la cantidad a comprar (se cotizó sin cantidad)` });
   }
   if (res.sinAsignar.length > 0) avisos.push({ nivel: 'aviso', texto: `${res.sinAsignar.length} producto(s) sin asignar a ningún proveedor` });
   for (const r of res.proveedores) {

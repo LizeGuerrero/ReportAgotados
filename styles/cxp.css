@@ -1015,3 +1015,255 @@ label.cxp-panel__fila {
   color: #111;
   border-radius: var(--radius-lg, 0.5rem);
 }
+
+/* =====================================================================================
+   Fase 6: la tabla es lo principal. Barra superior compacta, franja inferior de análisis,
+   configuración propia, alineación por columna y columnas fijas a la derecha.
+   ===================================================================================== */
+.ag-page.cxp-page {
+  padding: 0.5rem 0.75rem 0.5rem;
+}
+.cxp-page .cxp-tabs {
+  margin-bottom: 0.375rem;
+}
+.cxp-page .cxp-tab {
+  padding: 0.3rem 0.75rem;
+}
+
+/* Una sola fila: título + resumen + antigüedad (en pantallas anchas) */
+.cxp-barra {
+  gap: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+.cxp-barra__fila--resumen {
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  justify-content: flex-start;
+}
+.cxp-barra .cxp-titulo {
+  flex: none;
+  font-size: 1.05rem;
+}
+.cxp-barra .cxp-kpis {
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.cxp-barra .cxp-kpi {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.2rem 0.6rem;
+}
+.cxp-barra .cxp-kpi__titulo {
+  font-size: 0.6875rem;
+}
+.cxp-barra .cxp-kpi__valor {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+.cxp-barra .cxp-kpi__cantidad {
+  font-size: 0.6875rem;
+}
+.cxp-barra .cxp-tramos {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+.cxp-barra .cxp-tramo {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8125rem;
+}
+.cxp-barra .cxp-tramo__etiqueta,
+.cxp-barra .cxp-tramo__n {
+  font-size: 0.6875rem;
+}
+.cxp-barra__avisos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+.cxp-barra__avisos .cxp-banner {
+  flex: 1 1 22rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+.cxp-barra__error {
+  flex: 1 1 100%;
+  margin: 0;
+}
+.cxp-barra__fila--pie {
+  display: none;
+}
+
+/* Franja inferior: análisis a la izquierda, paginador a la derecha */
+.cxp-pie {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 1rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, #6b7280);
+}
+.cxp-pie__pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.625rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.cxp-analisis {
+  flex: 1 1 28rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.625rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.cxp-analisis__fuera {
+  color: var(--color-warning, #92400e);
+}
+.cxp-analisis__saldo {
+  flex: 0 1 17rem;
+  min-width: 11rem;
+}
+.cxp-analisis__saldo.is-invalid {
+  border-color: var(--color-danger, #b91c1c);
+}
+.cxp-restante {
+  padding: 0.125rem 0.5rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm, 0.375rem);
+  font-variant-numeric: tabular-nums;
+}
+.cxp-restante--ok {
+  color: var(--color-success, #166534);
+  background-color: var(--color-success-soft, #dcfce7);
+}
+.cxp-restante--excede {
+  color: var(--color-danger, #b91c1c);
+  background-color: var(--color-danger-soft, #fee2e2);
+}
+.cxp-restante__detalle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Alineación elegida por columna (va después de .cxp-num para poder cambiarla) */
+.cxp-hoja td.al-izq, .cxp-hoja th.al-izq { text-align: left; }
+.cxp-hoja td.al-centro, .cxp-hoja th.al-centro { text-align: center; }
+.cxp-hoja td.al-der, .cxp-hoja th.al-der { text-align: right; }
+.cxp-hoja td.al-der, .cxp-hoja td.cxp-num { font-variant-numeric: tabular-nums; }
+
+/* Columnas fijas a la derecha: se ve de dónde empiezan */
+.cxp-hoja .cxp-hoja__cong.is-primera-der {
+  box-shadow: -2px 0 0 var(--color-border-strong, #9ca3af);
+}
+
+/* ---------- Ventana de configuración ---------- */
+.cxp-config {
+  max-width: 56rem;
+  padding: 1rem 1.25rem;
+}
+.cxp-config__cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.cxp-config__cuerpo {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 0.75rem;
+  min-height: 22rem;
+}
+.cxp-config__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid var(--color-border-subtle, #e5e7eb);
+}
+.cxp-config__tab {
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text-muted, #6b7280);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm, 0.375rem);
+  cursor: pointer;
+}
+.cxp-config__tab:hover { color: var(--color-text); }
+.cxp-config__tab.is-active {
+  color: var(--color-text);
+  background-color: var(--color-surface-hover, #f3f4f6);
+  box-shadow: inset 3px 0 0 var(--color-ink, #111827);
+}
+.cxp-config__tab:focus-visible {
+  outline: 2px solid var(--color-accent, #2563eb);
+  outline-offset: -2px;
+}
+.cxp-config__panel {
+  min-width: 0;
+  max-height: min(34rem, 68vh);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+.cxp-config__mover {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+.cxp-config__tabla {
+  display: flex;
+  flex-direction: column;
+}
+.cxp-config__fila {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1.4fr) 6.5rem minmax(10rem, 1.6fr) minmax(8rem, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border-subtle, #e5e7eb);
+}
+.cxp-config__fila--cab {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #6b7280);
+  background-color: var(--color-surface, #fff);
+}
+.cxp-config__na {
+  color: var(--color-text-subtle, #6b7280);
+}
+@media (max-width: 48rem) {
+  .cxp-config__cuerpo { grid-template-columns: 1fr; }
+  .cxp-config__nav { flex-direction: row; flex-wrap: wrap; padding: 0 0 0.5rem; border-right: 0; border-bottom: 1px solid var(--color-border-subtle, #e5e7eb); }
+  .cxp-config__fila { grid-template-columns: 1fr 1fr; }
+  .cxp-config__fila--cab { display: none; }
+}

@@ -13,11 +13,10 @@ import FormExcluirSeleccion from './FormExcluirSeleccion';
 import MensajesProveedor from './MensajesProveedor';
 import FormPendiente from './FormPendiente';
 import HojaTabla from './hoja/HojaTabla';
-import MenuPop from './hoja/MenuPop';
-import PanelColumnas from './hoja/PanelColumnas';
-import PanelFormato from './hoja/PanelFormato';
+import PanelConfiguracion from './hoja/PanelConfiguracion';
 import { MAX_FILAS_INFINITO, prefsPorDefecto, type ColumnaHoja, type GrupoHoja, type PrefsHoja } from './hoja/tipos';
-import { usePrefsHoja } from './hoja/usePrefsHoja';
+import { usePrefsGeneral, usePrefsHoja } from './hoja/usePrefsHoja';
+import { copiarValor } from './copiado';
 import { usePermisosCxp } from './usePermisosCxp';
 import {
   TOTALES_VACIOS,
@@ -62,10 +61,11 @@ export default function CxpCartera({
   const esExcluidas = estado === 'excluido';
   const esPend = estado === 'pendiente';
 
-  // ---- Preferencias de la tabla (se guardan en este navegador) ----
+  // ---- Preferencias de la tabla y de copiado (se guardan en la base de datos, por usuario) ----
   const ocultasPorDefecto = useMemo(() => (esExcluidas ? ['sede'] : ['documento_erp', 'sede']), [esExcluidas]);
   const defecto = useMemo(() => prefsPorDefecto(ocultasPorDefecto), [ocultasPorDefecto]);
-  const { prefs, cambiar, restablecer, listo } = usePrefsHoja(`cxp.hoja.v1:${organizacionId}:${estado}`, defecto);
+  const { prefs, cambiar, restablecer, listo, sincronizado, errorPrefs } = usePrefsHoja(supabase, organizacionId, estado, defecto);
+  const general = usePrefsGeneral(supabase, organizacionId);
   const infinito = prefs.modo === 'infinito';
   const lote = prefs.porPagina;
 
@@ -98,6 +98,9 @@ export default function CxpCartera({
   const [pago, setPago] = useState<{ filas: FilaCxp[] } | null>(null);
   const [mensajes, setMensajes] = useState<{ filas: FilaCxp[] } | null>(null);
   const [exclSel, setExclSel] = useState<FilaCxp[] | null>(null);
+  const [configurando, setConfigurando] = useState(false);
+  // Saldo del banco para el análisis de pagos: opcional y solo de cálculo (no se guarda ni toca ningún registro).
+  const [saldoTxt, setSaldoTxt] = useState('');
   const ultimaMarcada = useRef<string | null>(null);
   const [altura, setAltura] = useState<string | undefined>(undefined);
   const peticion = useRef(0);
@@ -114,7 +117,7 @@ export default function CxpCartera({
         return;
       }
       const arriba = el.getBoundingClientRect().top + window.scrollY;
-      setAltura(`${Math.max(420, window.innerHeight - arriba - 24)}px`);
+      setAltura(`${Math.max(420, window.innerHeight - arriba - 12)}px`);
     };
     calcular();
     window.addEventListener('resize', calcular);
@@ -130,6 +133,13 @@ export default function CxpCartera({
     return () => clearTimeout(t);
   }, [texto]);
 
+  // Si no se pudieron leer o guardar las preferencias, se avisa (la tabla sigue funcionando).
+  const errorPrefsGeneral = general.errorPrefs;
+  useEffect(() => {
+    const m = errorPrefs || errorPrefsGeneral;
+    if (m) setAviso({ texto: m, error: true });
+  }, [errorPrefs, errorPrefsGeneral]);
+
   useEffect(() => {
     if (!aviso) return;
     const t = setTimeout(() => setAviso(null), 4000);
@@ -143,10 +153,22 @@ export default function CxpCartera({
     return { p_tercero: null, p_nombre: null };
   }, [proveedor]);
 
-  // Al cambiar un filtro se limpia la selección: así no se paga nada que ya no se está viendo.
+  // La selección vive aparte de la tabla: cambiar de proveedor, buscar o filtrar NO la borra. Cuando una fila vuelve
+  // a aparecer, se actualiza la copia guardada con los datos recién cargados (para que el total siga al día).
   useEffect(() => {
-    setSeleccion(new Map());
-  }, [busqueda, filtroProveedor, sede, origen, vencimiento]);
+    setSeleccion((prev) => {
+      if (prev.size === 0) return prev;
+      let cambio = false;
+      const n = new Map(prev);
+      for (const f of filas) {
+        if (n.has(f.id) && n.get(f.id) !== f) {
+          n.set(f.id, f);
+          cambio = true;
+        }
+      }
+      return cambio ? n : prev;
+    });
+  }, [filas]);
 
   // Filtros comunes (los totales no usan el de vencimiento: siempre muestran todos los tramos).
   const comunes = useMemo(
@@ -398,6 +420,31 @@ export default function CxpCartera({
     return t;
   }, [seleccion]);
 
+  // Seleccionadas que ahora no se ven por el filtro o la página (siguen contando en el total).
+  const fueraDeVista = useMemo(() => {
+    const visibles = new Set(filas.map((r) => r.id));
+    let n = 0;
+    seleccion.forEach((_r, id) => {
+      if (!visibles.has(id)) n += 1;
+    });
+    return n;
+  }, [seleccion, filas]);
+
+  // Saldo opcional: vacío = solo se muestra la suma. Un texto que no es número no se usa (se marca en rojo).
+  const saldoNum = saldoTxt.trim() === '' ? null : aNumero(saldoTxt);
+  const saldo = saldoNum === null || Number.isNaN(saldoNum) ? null : saldoNum;
+  const restante = saldo === null ? null : saldo - totalSeleccion;
+  const [copiado, setCopiado] = useState(false);
+  async function copiarTotal() {
+    try {
+      await copiarValor(totalSeleccion, general.prefs.copiado);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1500);
+    } catch {
+      setAviso({ texto: 'No se pudo copiar el total.', error: true });
+    }
+  }
+
   /** Pagar (uno o varios): primero se muestra la lista de documentos para confirmar. */
   function pedirPago(lista: FilaCxp[]) {
     if (lista.length > 0) setPago({ filas: lista });
@@ -503,20 +550,20 @@ export default function CxpCartera({
     },
 
     {
-      clave: 'anticipos', titulo: 'Anticipos', grupo: 'valores', ancho: 130, alinear: 'der',
+      clave: 'anticipos', titulo: 'Anticipos', grupo: 'valores', ancho: 130, alinear: 'der', copia: (f) => f.anticipos,
       render: (f) => <CeldaEditable tipo="num" valor={f.anticipos} editable={anotable} etiqueta="Anticipos" onGuardar={(v) => guardarCampo(f, 'anticipos', v)} />,
     },
     {
-      clave: 'descuentos', titulo: 'Descuentos', grupo: 'valores', ancho: 130, alinear: 'der',
+      clave: 'descuentos', titulo: 'Descuentos', grupo: 'valores', ancho: 130, alinear: 'der', copia: (f) => f.descuentos,
       render: (f) => <CeldaEditable tipo="num" valor={f.descuentos} editable={anotable} etiqueta="Descuentos" onGuardar={(v) => guardarCampo(f, 'descuentos', v)} />,
     },
     {
-      clave: 'retenciones', titulo: 'Adic. retenciones', grupo: 'valores', ancho: 140, alinear: 'der',
+      clave: 'retenciones', titulo: 'Adic. retenciones', grupo: 'valores', ancho: 140, alinear: 'der', copia: (f) => f.retenciones,
       render: (f) => <CeldaEditable tipo="num" valor={f.retenciones} editable={anotable} etiqueta="Adicionales retenciones" onGuardar={(v) => guardarCampo(f, 'retenciones', v)} />,
     },
-    { clave: 'total', titulo: 'Total factura', grupo: 'valores', ancho: 140, orden: 'total_factura', alinear: 'der', render: (f) => moneda(f.total_factura) },
+    { clave: 'total', titulo: 'Total factura', grupo: 'valores', ancho: 140, orden: 'total_factura', alinear: 'der', copia: (f) => f.total_factura, render: (f) => moneda(f.total_factura) },
     {
-      clave: 'pagar', titulo: 'Val. a pagar', grupo: 'valores', ancho: 140, orden: 'val_pagar', alinear: 'der', resumen: true,
+      clave: 'pagar', titulo: 'Val. a pagar', grupo: 'valores', ancho: 140, orden: 'val_pagar', alinear: 'der', resumen: true, copia: (f) => f.val_pagar,
       render: (f) => <strong>{moneda(f.val_pagar)}</strong>,
     },
 
@@ -580,15 +627,15 @@ export default function CxpCartera({
     </div>
   );
 
+  const nSel = seleccion.size;
+  const mostrarAnalisis = hayCheck && (esPagados ? nSel > 0 : true);
+
   return (
     <div className="cxp-espacio" ref={espacio} style={altura ? { height: altura } : undefined}>
-      {/* ===== Barra superior fija: resumen, avisos, filtros, formato y paginador ===== */}
+      {/* ===== Barra superior compacta: título, resumen, antigüedad, avisos y filtros ===== */}
       <div className="cxp-barra">
         <div className="cxp-barra__fila cxp-barra__fila--resumen">
-          <div className="cxp-barra__titulo">
-            <h1 className="cxp-titulo">{titulo}</h1>
-            <p className="cxp-lead">{descripcion}</p>
-          </div>
+          <h1 className="cxp-titulo" title={descripcion}>{titulo}</h1>
           <div className="cxp-kpis" role="group" aria-label="Resumen de la cartera">
             {esPagados || esExcluidas ? (
               <Kpi titulo={esPagados ? 'Total pagado' : 'Total excluido'} valor={totales.suma_total} cantidad={totales.n_total} activo={false} />
@@ -600,67 +647,68 @@ export default function CxpCartera({
               </>
             )}
           </div>
+          {esPend && prefs.verTramos && (
+            <div className="cxp-tramos" role="group" aria-label="Antigüedad de lo vencido">
+              {([
+                ['1_30', '1–30 d', totales.suma_1_30, totales.n_1_30],
+                ['31_60', '31–60 d', totales.suma_31_60, totales.n_31_60],
+                ['61_90', '61–90 d', totales.suma_61_90, totales.n_61_90],
+                ['mas_90', '+90 d', totales.suma_mas_90, totales.n_mas_90],
+              ] as [Vencimiento, string, number, number][]).map(([clave, etiqueta, valor, n]) => (
+                <button
+                  key={clave}
+                  type="button"
+                  className={vencimiento === clave ? 'cxp-tramo is-active' : 'cxp-tramo'}
+                  aria-pressed={vencimiento === clave}
+                  title={`Vencido hace ${etiqueta.replace(' d', ' días')}: ${n} documento(s)`}
+                  onClick={() => filtrar(setVencimiento)(vencimiento === clave ? '' : clave)}
+                >
+                  <span className="cxp-tramo__etiqueta">{etiqueta}</span>
+                  <span className="cxp-tramo__valor">{moneda(valor)}</span>
+                  <span className="cxp-tramo__n">({n})</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {esPend && prefs.verTramos && (
-          <div className="cxp-tramos" role="group" aria-label="Antigüedad de lo vencido">
-            <span className="cxp-tramos__titulo">Vencido por antigüedad:</span>
-            {([
-              ['1_30', '1–30 días', totales.suma_1_30, totales.n_1_30],
-              ['31_60', '31–60 días', totales.suma_31_60, totales.n_31_60],
-              ['61_90', '61–90 días', totales.suma_61_90, totales.n_61_90],
-              ['mas_90', 'Más de 90 días', totales.suma_mas_90, totales.n_mas_90],
-            ] as [Vencimiento, string, number, number][]).map(([clave, etiqueta, valor, n]) => (
-              <button
-                key={clave}
-                type="button"
-                className={vencimiento === clave ? 'cxp-tramo is-active' : 'cxp-tramo'}
-                aria-pressed={vencimiento === clave}
-                onClick={() => filtrar(setVencimiento)(vencimiento === clave ? '' : clave)}
-              >
-                <span className="cxp-tramo__etiqueta">{etiqueta}</span>
-                <span className="cxp-tramo__valor">{moneda(valor)}</span>
-                <span className="cxp-tramo__n">{n} doc.</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {esPend && ultima !== undefined && (
-          <div className={vieja ? 'cxp-banner cxp-banner--aviso' : 'cxp-banner'} role="status">
-            {ultima === null ? (
-              'Aún no se ha cargado ningún archivo del ERP: los totales solo incluyen pendientes escritos a mano.'
-            ) : (
-              <>
-                Datos del ERP al <strong>{fechaHora(ultima.fecha)}</strong>
-                {ultima.usuario ? ` · cargó ${ultima.usuario}` : ''}
-                {ultima.archivo ? ` · ${ultima.archivo}` : ''}.
-                {vieja && ' Hace más de 3 días: conviene cargar un archivo nuevo.'}
-                {ultima.ausentes > 0 && (
+        {((esPend && ultima !== undefined) || (esPend && nCruces > 0 && permisos.editar) || error) && (
+          <div className="cxp-barra__avisos">
+            {esPend && ultima !== undefined && (
+              <div className={vieja ? 'cxp-banner cxp-banner--aviso' : 'cxp-banner'} role="status">
+                {ultima === null ? (
+                  'Aún no se ha cargado ningún archivo del ERP: los totales solo incluyen pendientes escritos a mano.'
+                ) : (
                   <>
-                    {' '}
-                    <button type="button" className="cxp-link" onClick={() => filtrar(setOrigen)('ausente')}>
-                      {ultima.ausentes} documento(s) no vinieron en esa carga
-                    </button>{' '}
-                    (puede que ya estén pagados en el ERP).
+                    ERP al <strong>{fechaHora(ultima.fecha)}</strong>
+                    {ultima.usuario ? ` · ${ultima.usuario}` : ''}
+                    {ultima.archivo ? ` · ${ultima.archivo}` : ''}.
+                    {vieja && ' Hace más de 3 días: conviene cargar uno nuevo.'}
+                    {ultima.ausentes > 0 && (
+                      <>
+                        {' '}
+                        <button type="button" className="cxp-link" onClick={() => filtrar(setOrigen)('ausente')}>
+                          {ultima.ausentes} no vinieron en esa carga
+                        </button>{' '}
+                        (puede que ya estén pagados en el ERP).
+                      </>
+                    )}
                   </>
                 )}
-              </>
+              </div>
             )}
-          </div>
-        )}
-
-        {esPend && nCruces > 0 && permisos.editar && (
-          <div className="cxp-banner cxp-banner--aviso" role="status">
-            {nCruces} pendiente(s) manual(es) parecen estar ya en el ERP; si no los cruzas, se cuentan dos veces.{' '}
-            <button type="button" className="cxp-link" onClick={() => setCruces({ manual: null })}>Revisar cruces</button>
-          </div>
-        )}
-
-        {error && (
-          <div className="ui-alert ui-alert--error ag-alert" role="alert">
-            <AlertIcon className="ui-alert__icon" />
-            <span>{error}</span>
+            {esPend && nCruces > 0 && permisos.editar && (
+              <div className="cxp-banner cxp-banner--aviso" role="status">
+                {nCruces} manual(es) parecen estar ya en el ERP; si no los cruzas, se cuentan dos veces.{' '}
+                <button type="button" className="cxp-link" onClick={() => setCruces({ manual: null })}>Revisar cruces</button>
+              </div>
+            )}
+            {error && (
+              <div className="ui-alert ui-alert--error ag-alert cxp-barra__error" role="alert">
+                <AlertIcon className="ui-alert__icon" />
+                <span>{error}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -695,45 +743,13 @@ export default function CxpCartera({
           </div>
 
           <div className="cxp-barra__botones">
-            <MenuPop etiqueta="Columnas">
-              <PanelColumnas columnas={columnas} grupos={grupos} prefs={prefs} onPrefs={cambiarPrefs} ocultasPorDefecto={ocultasPorDefecto} />
-            </MenuPop>
-            <MenuPop etiqueta="Formato">
-              <PanelFormato prefs={prefs} onPrefs={cambiarPrefs} onRestablecer={restablecer} conTramos={esPend} conSeleccion={hayCheck} />
-            </MenuPop>
+            <button type="button" className="ui-btn" onClick={() => setConfigurando(true)} aria-haspopup="dialog">
+              Configuración
+            </button>
             {esPend && permisos.crear && (
               <button type="button" className="ui-btn ui-btn--primary" onClick={() => setFormulario({ editar: null })}>
                 + Agregar pendiente
               </button>
-            )}
-          </div>
-        </div>
-
-        <div className="cxp-barra__fila cxp-barra__fila--pie">
-          {esPend && (
-            <span className="cxp-leyenda"><i className="cxp-leyenda__muestra" /> Manual: aún no está en el ERP</span>
-          )}
-          {proveedor && <span className="cxp-barra__nota">Los totales son del proveedor filtrado.</span>}
-          <div className="cxp-barra__pager" aria-live="polite">
-            {infinito ? (
-              <>
-                <span>{cargando ? 'Cargando…' : `Mostrando ${filas.length} de ${total}`}</span>
-                {hayMas && (
-                  <button type="button" className="ui-btn ui-btn--sm" disabled={cargandoMas} onClick={cargarMas}>
-                    {cargandoMas ? 'Cargando…' : 'Cargar más'}
-                  </button>
-                )}
-                {total > MAX_FILAS_INFINITO && filas.length >= MAX_FILAS_INFINITO && (
-                  <span className="cxp-barra__nota">Máximo {MAX_FILAS_INFINITO} filas: afina los filtros para ver el resto.</span>
-                )}
-              </>
-            ) : (
-              <>
-                <span>{cargando ? 'Cargando…' : `${total} documento(s)`}</span>
-                <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0 || cargando} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
-                <span>Página {pagina + 1} de {paginas}</span>
-                <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas || cargando} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
-              </>
             )}
           </div>
         </div>
@@ -762,37 +778,122 @@ export default function CxpCartera({
         etiqueta="Cartera por pagar"
         hayMas={hayMas}
         alCentinela={infinito ? cargarMas : undefined}
+        modoCopiado={general.prefs.copiado}
         reinicio={`${busqueda}|${proveedor}|${sede}|${origen}|${vencimiento}|${orden?.clave ?? ''}${orden?.dir ?? ''}|${pagina}|${infinito}|${lote}`}
       />
 
-      {hayCheck && seleccion.size > 0 && (
-        <div className="cxp-seleccion" role="region" aria-label="Documentos seleccionados">
-          <div className="cxp-seleccion__info">
-            <span>
-              <strong>{seleccion.size}</strong> seleccionado(s) · Total <strong>{moneda(totalSeleccion)}</strong>
+      {/* ===== Franja inferior: análisis de pagos (solo cálculo), acciones sobre la selección y paginador ===== */}
+      <div className="cxp-pie">
+        {mostrarAnalisis && (
+          <div className="cxp-analisis" role="region" aria-label="Análisis de pagos">
+            <span className="cxp-analisis__sel" aria-live="polite">
+              <strong>{nSel}</strong> seleccionado(s)
+              {fueraDeVista > 0 && (
+                <span className="cxp-analisis__fuera" title="Siguen seleccionados y cuentan en el total, aunque el filtro, la búsqueda o la página no los muestren">
+                  {' '}({fueraDeVista} fuera de la vista)
+                </span>
+              )}
+              {' · '}Total <strong>{moneda(totalSeleccion)}</strong>
             </span>
-            <button type="button" className="ui-btn" onClick={() => setSeleccion(new Map())}>Limpiar</button>
-          </div>
-          <div className="cxp-seleccion__centro">
-            {esPend && permisos.pagar && (
-              <button type="button" className="ui-btn ui-btn--primary cxp-btn-grande" onClick={() => pedirPago(Array.from(seleccion.values()))}>
+            {esPend && (
+              <>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={saldoNum !== null && Number.isNaN(saldoNum) ? 'ui-input ui-input--sm cxp-analisis__saldo is-invalid' : 'ui-input ui-input--sm cxp-analisis__saldo'}
+                  placeholder="Saldo disponible en banco (opcional)"
+                  aria-label="Saldo disponible en banco (opcional)"
+                  aria-invalid={saldoNum !== null && Number.isNaN(saldoNum)}
+                  value={saldoTxt}
+                  onChange={(e) => setSaldoTxt(e.target.value)}
+                  onBlur={() => saldo !== null && setSaldoTxt(new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(saldo))}
+                />
+                {restante !== null && (
+                  <span
+                    className={restante < 0 ? 'cxp-restante cxp-restante--excede' : 'cxp-restante cxp-restante--ok'}
+                    role="status"
+                    title={`Saldo ${moneda(saldo)} − seleccionado ${moneda(totalSeleccion)}`}
+                  >
+                    {restante < 0 ? `⚠ Excede el saldo por ${moneda(-restante)}` : `✓ Queda ${moneda(restante)}`}
+                    <span className="cxp-restante__detalle"> (restante {moneda(restante)})</span>
+                  </span>
+                )}
+              </>
+            )}
+            {nSel > 0 && (
+              <>
+                <button type="button" className="ui-btn ui-btn--sm" onClick={copiarTotal} title="Copia el total seleccionado con el formato elegido en Configuración">
+                  {copiado ? 'Copiado' : 'Copiar total'}
+                </button>
+                <button type="button" className="ui-btn ui-btn--sm" onClick={() => setSeleccion(new Map())}>Limpiar selección</button>
+              </>
+            )}
+            {nSel > 0 && esPend && permisos.pagar && (
+              <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => pedirPago(Array.from(seleccion.values()))}>
                 Marcar como pagados
               </button>
             )}
-            {esPagados && (
-              <button type="button" className="ui-btn ui-btn--primary cxp-btn-grande" onClick={() => setMensajes({ filas: Array.from(seleccion.values()) })}>
+            {nSel > 0 && esPagados && (
+              <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => setMensajes({ filas: Array.from(seleccion.values()) })}>
                 Armar mensaje para los proveedores
               </button>
             )}
-          </div>
-          <div className="cxp-seleccion__derecha">
-            {esPend && permisos.excluir && (
-              <button type="button" className="ui-btn cxp-btn-grande" onClick={() => setExclSel(Array.from(seleccion.values()))} title="Dejar fuera de la cartera los documentos seleccionados">
+            {nSel > 0 && esPend && permisos.excluir && (
+              <button type="button" className="ui-btn ui-btn--sm" onClick={() => setExclSel(Array.from(seleccion.values()))} title="Dejar fuera de la cartera los documentos seleccionados">
                 Excluir selección
               </button>
             )}
           </div>
+        )}
+        <div className="cxp-pie__pager" aria-live="polite">
+          {esPend && <span className="cxp-leyenda"><i className="cxp-leyenda__muestra" /> Manual: aún no está en el ERP</span>}
+          {proveedor && <span className="cxp-barra__nota">Totales del proveedor filtrado.</span>}
+          {infinito ? (
+            <>
+              <span>{cargando ? 'Cargando…' : `Mostrando ${filas.length} de ${total}`}</span>
+              {hayMas && (
+                <button type="button" className="ui-btn ui-btn--sm" disabled={cargandoMas} onClick={cargarMas}>
+                  {cargandoMas ? 'Cargando…' : 'Cargar más'}
+                </button>
+              )}
+              {total > MAX_FILAS_INFINITO && filas.length >= MAX_FILAS_INFINITO && (
+                <span className="cxp-barra__nota">Máximo {MAX_FILAS_INFINITO} filas: afina los filtros.</span>
+              )}
+            </>
+          ) : (
+            <>
+              <span>{cargando ? 'Cargando…' : `${total} documento(s)`}</span>
+              <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0 || cargando} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
+              <span>Pág. {pagina + 1}/{paginas}</span>
+              <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas || cargando} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+            </>
+          )}
         </div>
+      </div>
+
+      {configurando && (
+        <PanelConfiguracion
+          columnas={columnas}
+          grupos={grupos}
+          prefs={prefs}
+          onPrefs={cambiarPrefs}
+          general={general.prefs}
+          onGeneral={general.cambiar}
+          ocultasPorDefecto={ocultasPorDefecto}
+          conTramos={esPend}
+          conSeleccion={hayCheck}
+          sincronizado={sincronizado && general.sincronizado}
+          onRestablecerPantalla={() => {
+            setPagina(0);
+            restablecer();
+          }}
+          onRestablecerTodo={() => {
+            setPagina(0);
+            restablecer();
+            general.restablecer();
+          }}
+          onCerrar={() => setConfigurando(false)}
+        />
       )}
 
       <div role="status" aria-live="polite">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMesa } from '@/components/pedidos/MesaContexto';
-import { costoBase, esComparable, estadoOfertasProveedor, ofertaDe, porConfirmarErp, resumenCompra } from '@/components/pedidos/reglas';
+import { costoBase, esComparable, estadoOfertasProveedor, numeroDeTexto, ofertaDe, porConfirmarErp, resumenCompra } from '@/components/pedidos/reglas';
 import { ModalCatalogoProveedor, ModalConsultar } from '@/components/pedidos/modales';
 import MensajeProveedor from '@/components/pedidos/MensajeProveedor';
 import CondicionesProveedor from '@/components/pedidos/CondicionesProveedor';
@@ -91,6 +91,21 @@ export default function PorProveedor() {
                   </tbody>
                 </table>
                 {sinOferta.length > 0 && <p className="mod-sub">Sin oferta para: {sinOferta.map((l) => l.nombre).join(', ')}</p>}
+                {puede && (
+                  <label className="mod-text mod-flex mod-gap-1 mod-center" title="Vacío = según las condiciones del proveedor; 0 = sin flete">
+                    Flete cotizado{' '}
+                    <input key={`${p.proveedor_id}-${p.flete_cotizado ?? ''}`} className="ui-input ui-input--sm" style={{ width: 110 }} inputMode="decimal" defaultValue={typeof p.flete_cotizado === 'number' ? String(p.flete_cotizado) : ''}
+                      placeholder="según condiciones" aria-label={`Flete cotizado por ${p.nombre}`}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                      onBlur={(e) => {
+                        const t = e.currentTarget.value.trim();
+                        const v = t === '' ? null : numeroDeTexto(t);
+                        if (v === undefined || (v !== null && v < 0)) { e.currentTarget.value = typeof p.flete_cotizado === 'number' ? String(p.flete_cotizado) : ''; return; }
+                        if (v === (p.flete_cotizado ?? null)) return;
+                        llamar('compra_proveedor_flete', { p_compra: d.compra.id, p_proveedor: p.proveedor_id, p_flete: v });
+                      }} />
+                  </label>
+                )}
                 {r && (
                   <div className="mod-mt-2">
                     Asignado: <strong>{pesos(r.subtotal)}</strong> antes de IVA

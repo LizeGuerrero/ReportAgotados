@@ -14,6 +14,7 @@ interface FilaProveedor {
   nombre: string;
   contacto: string | null;
   telefono: string | null;
+  whatsapp: string | null;
   email: string | null;
   cobra_iva: boolean;
   iva_compra: number;
@@ -122,7 +123,7 @@ export default function ProveedoresMaestro({ organizacionId }: { organizacionId:
       <table className="mod-table">
         <thead>
           <tr>
-            {['Documento', 'Nombre', 'Contacto', 'Teléfono', 'IVA de compra', 'Ítems'].map((h) => (
+            {['Documento', 'Nombre', 'Contacto', 'Teléfono', 'WhatsApp', 'IVA de compra', 'Ítems'].map((h) => (
               <th key={h}>{h}</th>
             ))}
           </tr>
@@ -134,6 +135,7 @@ export default function ProveedoresMaestro({ organizacionId }: { organizacionId:
               <td>{f.nombre}</td>
               <td>{f.contacto ?? ''}</td>
               <td>{f.telefono ?? ''}</td>
+              <td>{f.whatsapp ?? ''}</td>
               <td>{f.cobra_iva ? `${Math.round(f.iva_compra * 10000) / 100}%` : 'No cobra IVA'}</td>
               <td>{f.items || ''}</td>
             </tr>

@@ -6,6 +6,7 @@ import { useTiempoReal } from '@/components/useTiempoReal';
 import { fecha } from '@/components/pedidos/comun';
 import { numeroCompra, type CompraResumen } from '@/components/pedidos/tipos';
 import { Badge, Vacio, textoError } from '@/components/pedidos/ui';
+import TablaExcel from '@/components/TablaExcel';
 
 interface Evento { id: number; fecha: string; tipo: string; texto: string; compra_id: string; compra_numero: number | null; usuario: string | null; total: number }
 
@@ -64,7 +65,7 @@ export default function Historial({
       </div>
       {error && <p className="mod-error">{error}</p>}
       {eventos.length === 0 ? <Vacio titulo="Sin eventos" texto="Ningún evento coincide con el filtro." /> : (
-        <div className="mod-scroll">
+        <TablaExcel clave="pedidos-historial" etiqueta="Historial de compras">
           <table className="mod-table">
             <thead><tr><th>Cuándo</th><th>Tipo</th><th>Qué pasó</th>{!compraId && <th>Compra</th>}<th>Quién</th></tr></thead>
             <tbody>
@@ -79,7 +80,7 @@ export default function Historial({
               ))}
             </tbody>
           </table>
-        </div>
+        </TablaExcel>
       )}
       <div className="mod-pager">
         <button disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>

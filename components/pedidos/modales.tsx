@@ -7,10 +7,12 @@ import {
   avisosCompra, costoBase, costoConIva, esComparable, numeroDeTexto, ofertaDe, resumenCompra, variacionErp,
 } from '@/components/pedidos/reglas';
 import { analizarPegado } from '@/components/pedidos/pegado';
+import type { CampoPegado, ConfigPegado, Separador } from '@/components/pedidos/ajustes';
 import { pesos } from '@/components/pedidos/comun';
 import { useMesa } from '@/components/pedidos/MesaContexto';
 import { Badge, Modal, textoError } from '@/components/pedidos/ui';
 import NuevoItem from '@/components/pedidos/NuevoItem';
+import SelectorProductos from '@/components/pedidos/SelectorProductos';
 import FormProveedorNuevo from '@/components/proveedores/FormProveedorNuevo';
 
 /* ------------------------------------------------------------------ oferta de un proveedor para un producto */
@@ -147,32 +149,131 @@ export function ModalRepartir({ linea, onCerrar }: { linea: LineaCompra; onCerra
 
 /* ------------------------------------------------------------------ pegar precios */
 
-const ESTADO_FILA = { ok: 'Se registrará', sin_coincidencia: 'No se encontró el producto', sin_costo: 'Falta el costo', repetida: 'Repetida' } as const;
+const ESTADO_FILA = { ok: 'Se registrará', sin_coincidencia: 'No se encontró el producto', sin_costo: 'Falta el costo', repetida: 'Repetida', sin_producto: 'Sin producto' } as const;
+const CAMPOS: { valor: CampoPegado; texto: string }[] = [
+  { valor: 'producto', texto: 'Producto (referencia, código o nombre)' },
+  { valor: 'costo', texto: 'Costo unitario sin IVA' },
+  { valor: 'dias', texto: 'Días de entrega' },
+  { valor: 'observacion', texto: 'Observación' },
+  { valor: 'referencia', texto: 'Referencia del proveedor (actualiza el catálogo)' },
+  { valor: 'ignorar', texto: 'Ignorar' },
+];
+const SEPARADORES: { valor: Separador; texto: string }[] = [
+  { valor: 'auto', texto: 'Automático' }, { valor: 'tab', texto: 'Tabulador (Excel)' }, { valor: 'espacio', texto: 'Espacio' },
+  { valor: 'coma', texto: 'Coma ( , )' }, { valor: 'punto_coma', texto: 'Punto y coma ( ; )' }, { valor: 'barra', texto: 'Barra ( | )' }, { valor: 'otro', texto: 'Otro carácter…' },
+];
 
 export function ModalPegarPrecios({ prov, onCerrar }: { prov: ProveedorCompra; onCerrar: () => void }) {
-  const { d, llamar } = useMesa();
+  const { d, llamar, ajustes, cambiarAjustes, permisos, avisar, editable } = useMesa();
+  const cfg = ajustes.pegado;
   const [texto, setTexto] = useState('');
-  const filas = useMemo(() => analizarPegado(d, prov.proveedor_id, texto), [d, prov, texto]);
-  const ok = filas.filter((f) => f.estado === 'ok');
-  const ejemplo = d.lineas.filter((l) => ofertaDe(l, prov.proveedor_id)).slice(0, 2)
-    .map((l, k) => `${ofertaDe(l, prov.proveedor_id)?.referencia ?? l.codigo}   ${k === 0 ? '38.000   3' : '2.750'}`).join('\n');
+  const [fleteTexto, setFleteTexto] = useState(typeof prov.flete_cotizado === 'number' ? String(prov.flete_cotizado) : '');
+  const [actualizarRef, setActualizarRef] = useState(true);
+  const [config, setConfig] = useState(false);
+  const r = useMemo(() => analizarPegado(d, prov.proveedor_id, texto, cfg), [d, prov, texto, cfg]);
+  const ok = r.filas.filter((f) => f.estado === 'ok');
+  const fleteEscrito = fleteTexto.trim() !== '' ? numeroDeTexto(fleteTexto) : undefined;
+  const fleteFinal = r.flete ?? fleteEscrito;
+  const hayRef = cfg.columnas.includes('referencia');
+  // Siempre hay una columna más disponible para agregar otro campo (hasta 8)
+  const nCols = Math.min(8, Math.max(cfg.columnas.length + 1, r.columnas, 3));
+  const ponerCfg = (c: Partial<ConfigPegado>) => cambiarAjustes({ pegado: { ...cfg, ...c } });
+  const ponerColumna = (i: number, valor: CampoPegado) => {
+    const cols = [...cfg.columnas];
+    while (cols.length < nCols) cols.push('ignorar');
+    // un campo único (producto/costo/días) no puede estar en dos columnas
+    if (valor !== 'ignorar') cols.forEach((c, k) => { if (k !== i && c === valor) cols[k] = 'ignorar'; });
+    cols[i] = valor;
+    while (cols.length > 1 && cols[cols.length - 1] === 'ignorar') cols.pop();
+    ponerCfg({ columnas: cols });
+  };
+  const ejemplo = d.lineas.filter((l) => ofertaDe(l, prov.proveedor_id)).slice(0, 2).map((l, k) => `${ofertaDe(l, prov.proveedor_id)?.referencia ?? l.codigo}   ${k === 0 ? '38.000   3' : '2.750'}`).join('\n');
+
+  async function registrar() {
+    if (ok.length > 0) {
+      const x = await llamar('oferta_guardar_masivo', {
+        p_compra: d.compra.id, p_proveedor: prov.proveedor_id,
+        p_filas: ok.map((f) => ({ linea_id: f.lineaId, costo: f.costo, dias: f.dias ?? null, observacion: f.observacion ?? null })),
+      });
+      if (!x.ok) return;
+    }
+    if (fleteFinal !== undefined && fleteFinal >= 0) {
+      const f = await llamar('compra_proveedor_flete', { p_compra: d.compra.id, p_proveedor: prov.proveedor_id, p_flete: fleteFinal });
+      if (!f.ok) return;
+    }
+    if (hayRef && actualizarRef) {
+      let hechas = 0;
+      for (const f of ok.filter((y) => y.referencia)) {
+        const a = await llamar('compra_actualizar_referencia', { p_linea: f.lineaId, p_proveedor: prov.proveedor_id, p_referencia: f.referencia, p_nombre: null, p_confirmar: true });
+        if (!a.ok) return;
+        hechas++;
+      }
+      if (hechas > 0) avisar('ok', `${hechas} referencia(s) del proveedor actualizadas en el catálogo`);
+    }
+    onCerrar();
+  }
 
   return (
     <Modal titulo={`Pegar precios de ${prov.nombre}`} onCerrar={onCerrar} ancha>
       <p className="mod-text mod-mt-0">
-        Pega lo que te envió el proveedor (correo, WhatsApp o filas de Excel): una línea por producto con su <b>referencia</b>, <b>código interno</b> o <b>nombre</b>,
-        el <b>costo unitario sin IVA</b> y, si quieres, los <b>días de entrega</b> al final. Se empatan con los productos de esta compra y ves el resultado antes de registrarlo.
+        Pega lo que te envió el proveedor (correo, WhatsApp o filas de Excel). Tú decides cómo se separan las columnas y qué es cada una; se empatan con los productos de
+        esta compra y ves el resultado antes de registrarlo. Una línea “flete 25000” fija el flete que cotizó.
       </p>
+      <div className="mod-flex mod-gap-2 mod-center mod-wrap mod-mb-2">
+        <button type="button" className="ui-btn ui-btn--sm" aria-expanded={config} onClick={() => setConfig(!config)}>⚙ Configurar columnas</button>
+        <span className="mod-sub">
+          Separador: {SEPARADORES.find((s) => s.valor === cfg.separador)?.texto}{cfg.separador === 'otro' ? ` “${cfg.otro}”` : ''} · Columnas: {cfg.columnas.map((c) => CAMPOS.find((x) => x.valor === c)?.texto.split(' (')[0]).join(' | ')}
+        </span>
+      </div>
+      {config && (
+        <div className="mod-card mod-mb-2">
+          <div className="mod-flex mod-gap-3 mod-center mod-wrap mod-mb-2">
+            <label className="mod-text">Las columnas se separan con{' '}
+              <select className="ui-input ui-input--sm mod-auto" value={cfg.separador} onChange={(e) => ponerCfg({ separador: e.target.value as Separador })} aria-label="Separador">
+                {SEPARADORES.map((s) => <option key={s.valor} value={s.valor}>{s.texto}</option>)}
+              </select>
+            </label>
+            {cfg.separador === 'otro' && (
+              <label className="mod-text">carácter{' '}
+                <input className="ui-input ui-input--sm" style={{ width: 64 }} maxLength={3} value={cfg.otro} onChange={(e) => ponerCfg({ otro: e.target.value })} aria-label="Carácter separador" />
+              </label>
+            )}
+            <label className="mod-flex mod-gap-1 mod-center mod-text"><input type="checkbox" checked={cfg.primeraEsEncabezado} onChange={(e) => ponerCfg({ primeraEsEncabezado: e.target.checked })} /> La primera línea es el encabezado</label>
+          </div>
+          <div className="mod-flex mod-gap-2 mod-wrap">
+            {Array.from({ length: nCols }).map((_, i) => (
+              <label key={i} className="mod-text">Columna {i + 1}
+                <select className="ui-input ui-input--sm" style={{ display: 'block' }} value={cfg.columnas[i] ?? 'ignorar'} onChange={(e) => ponerColumna(i, e.target.value as CampoPegado)} aria-label={`Columna ${i + 1}`}>
+                  {CAMPOS.map((c) => <option key={c.valor} value={c.valor}>{c.texto}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+          <p className="mod-sub mod-mb-0">Se recuerda en este navegador. Con “Espacio”, el nombre del producto puede llevar varias palabras: los números del final son las demás columnas.</p>
+        </div>
+      )}
       <textarea className="ui-input mod-mono" rows={6} value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={ejemplo} aria-label="Precios pegados" autoFocus />
-      {filas.length > 0 && (
+      <div className="mod-flex mod-gap-3 mod-center mod-wrap mod-mt-2">
+        <label className="mod-text">Flete cotizado (opcional){' '}
+          <input className="ui-input ui-input--sm" style={{ width: 120 }} inputMode="decimal" value={r.flete !== undefined ? String(r.flete) : fleteTexto} disabled={r.flete !== undefined}
+            onChange={(e) => setFleteTexto(e.target.value)} aria-label="Flete cotizado" placeholder="según condiciones" />
+        </label>
+        <span className="mod-sub">{r.flete !== undefined ? 'Tomado de la línea “flete” pegada.' : 'Vacío = se calcula con las condiciones del proveedor; 0 = sin flete.'}</span>
+        {hayRef && permisos.provCrear !== undefined && (
+          <label className="mod-flex mod-gap-1 mod-center mod-text" title="Usa la misma lógica del catálogo de ítems (con sus permisos y advertencias)">
+            <input type="checkbox" checked={actualizarRef} onChange={(e) => setActualizarRef(e.target.checked)} /> Actualizar la referencia del proveedor en el catálogo
+          </label>
+        )}
+      </div>
+      {r.filas.length > 0 && (
         <div className="mod-scroll mod-mt-2" style={{ maxHeight: 260 }}>
           <table className="mod-table">
-            <thead><tr><th>Línea pegada</th><th>Producto</th><th>Costo (sin IVA)</th><th>Días</th><th>Resultado</th></tr></thead>
+            <thead><tr><th>Línea pegada</th><th>Producto</th><th>Costo (sin IVA)</th><th>Días</th>{cfg.columnas.includes('observacion') && <th>Observación</th>}{hayRef && <th>Referencia nueva</th>}<th>Resultado</th></tr></thead>
             <tbody>
-              {filas.map((f, i) => (
+              {r.filas.map((f, i) => (
                 <tr key={i} className={f.estado === 'ok' ? undefined : 'is-faded'}>
-                  <td>{f.original}</td><td>{f.producto ?? '—'}</td><td>{f.costo !== undefined ? pesos(f.costo) : '—'}</td>
-                  <td>{f.dias ?? '—'}</td><td>{ESTADO_FILA[f.estado]}</td>
+                  <td>{f.original}</td><td>{f.producto ?? '—'}</td><td>{f.costo !== undefined ? pesos(f.costo) : '—'}</td><td>{f.dias ?? '—'}</td>
+                  {cfg.columnas.includes('observacion') && <td>{f.observacion ?? ''}</td>}{hayRef && <td>{f.referencia ?? ''}</td>}<td>{ESTADO_FILA[f.estado]}</td>
                 </tr>
               ))}
             </tbody>
@@ -180,17 +281,10 @@ export function ModalPegarPrecios({ prov, onCerrar }: { prov: ProveedorCompra; o
         </div>
       )}
       <div className="pm-modal__acciones">
-        <span className="mod-sub">{filas.length > ok.length ? `${filas.length - ok.length} línea(s) no se registrarán.` : ''}</span>
+        <span className="mod-sub">{r.filas.length > ok.length ? `${r.filas.length - ok.length} línea(s) no se registrarán.` : ''}</span>
         <button type="button" className="ui-btn" onClick={onCerrar}>Cancelar</button>
-        <button type="button" className="ui-btn ui-btn--primary" disabled={ok.length === 0}
-          onClick={async () => {
-            const r = await llamar('oferta_guardar_masivo', {
-              p_compra: d.compra.id, p_proveedor: prov.proveedor_id,
-              p_filas: ok.map((f) => ({ linea_id: f.lineaId, costo: f.costo, dias: f.dias ?? null })),
-            }, (n) => `${n} precio(s) registrados`);
-            if (r.ok) onCerrar();
-          }}>
-          Registrar {ok.length} precio(s)
+        <button type="button" className="ui-btn ui-btn--primary" disabled={!editable || (ok.length === 0 && fleteFinal === undefined)} onClick={registrar}>
+          Registrar {ok.length} precio(s){fleteFinal !== undefined ? ' y el flete' : ''}
         </button>
       </div>
     </Modal>
@@ -338,244 +432,45 @@ export function ModalConsultar({ onCerrar }: { onCerrar: () => void }) {
 
 /* ------------------------------------------------------------------ agregar productos a la compra */
 
-interface ItemCat { item_id: number; codigo: string | null; nombre_base: string; linea: string | null; unidad_medida: string | null; proveedores: number }
-
 export function ModalAgregarProducto({ onCerrar }: { onCerrar: () => void }) {
   const { d, supabase, organizacionId, llamar, permisos } = useMesa();
-  const [q, setQ] = useState('');
-  const [resultados, setResultados] = useState<ItemCat[]>([]);
-  const [rev, setRev] = useState<Record<number, string[]>>({});
-  const [item, setItem] = useState<ItemCat | null>(null);
-  const [cantidad, setCantidad] = useState('');
   const [creando, setCreando] = useState(false);
   const [lineasCat, setLineasCat] = useState<string[]>([]);
-  const [lineaSel, setLineaSel] = useState('');
-  const [cantLinea, setCantLinea] = useState('1');
-  const [soloExclusivos, setSoloExclusivos] = useState(false);
-  const [nLinea, setNLinea] = useState(0);
-  const [error, setError] = useState('');
-  const enCompra = new Set(d.lineas.map((l) => l.item_id));
 
   useEffect(() => {
     supabase.rpc('compra_lineas_disponibles', { p_org: organizacionId, p_proveedor: null })
       .then(({ data }) => setLineasCat(((data ?? []) as (string | { linea: string })[]).map((x) => (typeof x === 'string' ? x : x.linea))));
   }, [supabase, organizacionId]);
 
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      const { data, error: e } = await supabase.rpc('compra_buscar_items', { p_org: organizacionId, p_busqueda: q.trim() || null, p_limit: 30 });
-      if (e) return setError(textoError(e));
-      const lista = ((data ?? []) as ItemCat[]).filter((i) => !enCompra.has(i.item_id)).slice(0, 8);
-      setResultados(lista);
-      if (lista.length > 0) {
-        const r = await supabase.rpc('items_revision', { p_org: organizacionId, p_items: lista.map((i) => i.item_id) });
-        setRev(Object.fromEntries(((r.data ?? []) as { item_id: number; motivos: string[] }[]).map((x) => [x.item_id, x.motivos])));
-      }
-    }, 250);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase, organizacionId, q, d.lineas.length]);
-
-  useEffect(() => {
-    if (!lineaSel) { setNLinea(0); return; }
-    supabase.rpc('compra_contar_filtro', { p_org: organizacionId, p_lineas: [lineaSel], p_proveedor: null, p_solo_exclusivos: soloExclusivos })
-      .then(({ data }) => setNLinea(Number(data ?? 0)));
-  }, [supabase, organizacionId, lineaSel, soloExclusivos, d.lineas.length]);
-
-  const agregar = async (seguir: boolean) => {
-    const c = numeroDeTexto(cantidad);
-    if (!item) return;
-    if (c === undefined || c <= 0) return setError('Escribe la cantidad (un número mayor que cero).');
-    setError('');
-    const r = await llamar('compra_agregar_items', { p_compra: d.compra.id, p_items: [{ item_id: item.item_id, cantidad: c, sin_agotados: true }] }, `${item.nombre_base} agregado`);
-    if (!r.ok) return;
-    if (seguir) { setItem(null); setCantidad(''); } else onCerrar();
-  };
-
   return (
     <Modal titulo="Agregar productos a la compra" onCerrar={onCerrar} ancha>
-      <p className="mod-text mod-mt-0">No tiene que haber sido reportado como agotado: cualquier ítem del catálogo se puede comprar.</p>
-      <div className="mod-card mod-mb-2">
-        <h3 className="mod-h3 mod-mt-0">Toda una línea de una vez</h3>
-        <div className="mod-flex mod-gap-2 mod-center mod-wrap">
-          <select className="ui-input ui-input--sm mod-auto" value={lineaSel} onChange={(e) => setLineaSel(e.target.value)} aria-label="Línea a agregar">
-            <option value="">Elige una línea…</option>
-            {lineasCat.map((l) => <option key={l}>{l}</option>)}
-          </select>
-          <label className="mod-text">Cantidad por defecto{' '}
-            <input className="ui-input ui-input--sm" style={{ width: 80 }} inputMode="decimal" value={cantLinea} onChange={(e) => setCantLinea(e.target.value)} aria-label="Cantidad por defecto de la línea" />
-          </label>
-          <label className="mod-flex mod-gap-1 mod-center mod-text"><input type="checkbox" checked={soloExclusivos} onChange={(e) => setSoloExclusivos(e.target.checked)} /> Solo los que maneja un único proveedor</label>
-          <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={!lineaSel || nLinea === 0}
-            onClick={async () => {
-              const c = numeroDeTexto(cantLinea);
-              if (c === undefined || c <= 0) return setError('La cantidad por defecto debe ser mayor que cero.');
-              const r = await llamar('compra_agregar_por_filtro', { p_compra: d.compra.id, p_lineas: [lineaSel], p_proveedor: null, p_solo_exclusivos: soloExclusivos, p_cantidad: c }, `Línea “${lineaSel}” agregada`);
-              if (r.ok) onCerrar();
-            }}>
-            Agregar la línea ({nLinea})
-          </button>
-        </div>
-        <p className="mod-sub mod-mb-0">Se dejan fuera los productos sin proveedor (no se pueden cotizar) y los que ya están en la compra.</p>
-      </div>
-
-      <h3 className="mod-h3">O uno por uno</h3>
+      <p className="mod-text mod-mt-0">No tiene que haber sido reportado como agotado: cualquier ítem del catálogo se puede comprar. Filtra, elige varios (o todos los resultados) y se agregan de una vez.</p>
       {creando ? (
-        <NuevoItem supabase={supabase} organizacionId={organizacionId} lineas={lineasCat} permisos={permisos}
-          onCancelar={() => setCreando(false)}
-          onCreado={(id, nombre) => { setCreando(false); setItem({ item_id: id, codigo: null, nombre_base: nombre, linea: null, unidad_medida: null, proveedores: 0 }); }} />
+        <NuevoItem supabase={supabase} organizacionId={organizacionId} lineas={lineasCat} permisos={permisos} onCancelar={() => setCreando(false)}
+          onCreado={async (id) => { setCreando(false); const r = await llamar('compra_agregar_items', { p_compra: d.compra.id, p_items: [{ item_id: id, sin_agotados: true }] }, 'Ítem creado y agregado'); if (r.ok) onCerrar(); }} />
       ) : (
         <>
-          <input className="ui-input" style={{ width: '100%' }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por código, nombre o línea…" aria-label="Buscar ítem" autoFocus />
-          <div className="pm-lista mod-mt-2" style={{ maxHeight: 240 }}>
-            <table className="mod-table"><tbody>
-              {resultados.map((i) => {
-                const falta = (rev[i.item_id] ?? []).some((m) => m.startsWith('Falta'));
-                return (
-                  <tr key={i.item_id} className={`is-clickable${item?.item_id === i.item_id ? ' is-selected' : ''}`} onClick={() => setItem(i)}>
-                    <td><b>{i.codigo}</b> · {i.nombre_base}<span className="pm-chico">{i.linea ?? 'Sin línea'} · {i.proveedores} proveedor(es)</span></td>
-                    <td>
-                      {i.proveedores === 0 && <Badge tono="rojo" titulo="No se puede cotizar hasta vincularle un proveedor">sin proveedor</Badge>}{' '}
-                      {falta && <Badge tono="ambar" titulo="Faltan datos del ítem">revisar</Badge>}
-                    </td>
-                  </tr>
-                );
-              })}
-              {resultados.length === 0 && <tr><td className="mod-sub">Ningún ítem coincide con la búsqueda.</td></tr>}
-            </tbody></table>
-          </div>
+          <SelectorProductos supabase={supabase} organizacionId={organizacionId} compraId={d.compra.id} textoAceptar={(n) => `Agregar ${n} producto(s)`}
+            onAceptar={async (items) => { const r = await llamar('compra_agregar_items', { p_compra: d.compra.id, p_items: items.map((i) => ({ ...i, sin_agotados: true })) }, `${items.length} producto(s) agregados`); if (r.ok) onCerrar(); }} />
           {(permisos.itemsCrear || permisos.crear) && (
             <div className="mod-flex mod-gap-2 mod-center mod-mt-2"><span className="mod-sub">¿No existe?</span><button type="button" className="ui-btn ui-btn--sm" onClick={() => setCreando(true)}>Crear ítem nuevo</button></div>
           )}
         </>
       )}
-      {item && (
-        <div className="mod-mt-2">
-          <p><b>{item.codigo ? `${item.codigo} · ` : ''}{item.nombre_base}</b>{item.proveedores === 0 && <> <Badge tono="ambar">sin proveedores: al consultar uno se vinculará</Badge></>}</p>
-          <div className="mod-flex mod-gap-2 mod-center mod-wrap">
-            <label className="ui-field">
-              <span className="ui-label">Cantidad{item.unidad_medida ? ` (${item.unidad_medida})` : ''} *</span>
-              <input className="ui-input" inputMode="decimal" value={cantidad} onChange={(e) => setCantidad(e.target.value)} autoFocus />
-            </label>
-            <button type="button" className="ui-btn ui-btn--primary" onClick={() => agregar(false)}>Agregar a la compra</button>
-            <button type="button" className="ui-btn" onClick={() => agregar(true)}>Agregar y seguir</button>
-          </div>
-        </div>
-      )}
-      {error && <p className="mod-error">{error}</p>}
     </Modal>
   );
 }
 
-/* ------------------------------------------------------------------ catálogo de un proveedor (agregar en lote con cantidades) */
-
-interface FilaCatalogo {
-  item_id: number; codigo: string | null; nombre_base: string; linea: string | null; unidad_medida: string | null;
-  referencia: string | null; nombre_proveedor: string | null; precio_lista: number | null; exclusivo: boolean;
-  agotados_pendientes: number | null; total: number;
-}
+/* ------------------------------------------------------------------ catálogo de un proveedor */
 
 export function ModalCatalogoProveedor({ prov, onCerrar }: { prov: ProveedorCompra; onCerrar: () => void }) {
   const { d, supabase, organizacionId, llamar } = useMesa();
-  const [q, setQ] = useState('');
-  const [linea, setLinea] = useState('');
-  const [soloSuyos, setSoloSuyos] = useState(false);
-  const [lineas, setLineas] = useState<string[]>([]);
-  const [filas, setFilas] = useState<FilaCatalogo[]>([]);
-  const [sel, setSel] = useState<Set<number>>(new Set());
-  const [cantDefecto, setCantDefecto] = useState('1');
-  const [cant, setCant] = useState<Record<number, string>>({});
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    supabase.rpc('compra_lineas_disponibles', { p_org: organizacionId, p_proveedor: prov.proveedor_id })
-      .then(({ data }) => setLineas(((data ?? []) as (string | { linea: string })[]).map((x) => (typeof x === 'string' ? x : x.linea))));
-  }, [supabase, organizacionId, prov.proveedor_id]);
-
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      const { data, error: e } = await supabase.rpc('compra_catalogo_proveedor', {
-        p_org: organizacionId, p_compra: d.compra.id, p_proveedor: prov.proveedor_id,
-        p_busqueda: q.trim() || null, p_linea: linea || null, p_solo_exclusivos: soloSuyos, p_limit: 300, p_offset: 0,
-      });
-      if (e) setError(textoError(e));
-      else { setError(''); setFilas((data ?? []) as FilaCatalogo[]); }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [supabase, organizacionId, d.compra.id, d.lineas.length, prov.proveedor_id, q, linea, soloSuyos]);
-
-  const visiblesSel = filas.filter((f) => sel.has(f.item_id));
-  const todas = filas.length > 0 && visiblesSel.length === filas.length;
-  const alternar = (id: number) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const cantidadDe = (id: number) => numeroDeTexto(cant[id] ?? '') ?? numeroDeTexto(cantDefecto);
-
-  const agregar = async (ids: number[], texto: string) => {
-    const items = ids.map((id) => ({ item_id: id, cantidad: cantidadDe(id), sin_agotados: true }));
-    if (items.some((i) => !i.cantidad || i.cantidad <= 0)) return setError('Hay productos sin cantidad: escribe una cantidad por defecto o la de cada uno.');
-    const r = await llamar('compra_agregar_items', { p_compra: d.compra.id, p_items: items }, texto);
-    if (r.ok) onCerrar();
-  };
-
   return (
     <Modal titulo={`Catálogo de ${prov.nombre}`} onCerrar={onCerrar} ancha>
-      <p className="mod-text mod-mt-0">
-        Productos que este proveedor suministra y aún no están en la compra. Marca varios (o toda una línea) y se agregan de una vez, ya con su precio del ERP.
-        Los que no tengan cantidad propia entran con la <b>cantidad por defecto</b>; luego la ajustas en la tabla de la compra.
-      </p>
-      <div className="mod-flex mod-gap-2 mod-center mod-wrap mod-mb-2">
-        <input className="ui-input ui-input--sm" style={{ flex: '1 1 220px' }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por código, nombre o referencia" aria-label="Buscar" autoFocus />
-        <select className="ui-input ui-input--sm mod-auto" value={linea} onChange={(e) => setLinea(e.target.value)} aria-label="Línea">
-          <option value="">Todas las líneas</option>
-          {lineas.map((l) => <option key={l}>{l}</option>)}
-        </select>
-        <label className="mod-text"><input type="checkbox" checked={soloSuyos} onChange={(e) => setSoloSuyos(e.target.checked)} /> Solo los que únicamente maneja este proveedor</label>
-      </div>
-      <div className="mod-flex mod-gap-2 mod-center mod-wrap mod-mb-2">
-        <label className="mod-text">Cantidad por defecto{' '}
-          <input className="ui-input ui-input--sm" style={{ width: 80 }} inputMode="decimal" value={cantDefecto} onChange={(e) => setCantDefecto(e.target.value)} aria-label="Cantidad por defecto" />
-        </label>
-        {linea && (
-          <button type="button" className="ui-btn ui-btn--sm" disabled={filas.length === 0} onClick={() => agregar(filas.map((f) => f.item_id), `Línea “${linea}”: ${filas.length} producto(s) agregados`)}>
-            Agregar toda la línea “{linea}” ({filas.length})
-          </button>
-        )}
-        <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={visiblesSel.length === 0}
-          onClick={() => agregar(visiblesSel.map((f) => f.item_id), `${visiblesSel.length} producto(s) agregados`)}>
-          Agregar seleccionados ({visiblesSel.length})
-        </button>
-      </div>
-      {error && <p className="mod-error">{error}</p>}
-      <div className="pm-lista">
-        <table className="mod-table">
-          <thead>
-            <tr>
-              <th className="mod-check"><input type="checkbox" checked={todas} disabled={filas.length === 0} aria-label="Seleccionar todos los visibles"
-                onChange={(e) => setSel((s) => { const n = new Set(s); filas.forEach((f) => (e.target.checked ? n.add(f.item_id) : n.delete(f.item_id))); return n; })} /></th>
-              <th>Producto</th><th>Ref.</th><th>Precio lista</th><th>Cantidad</th><th />
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((f) => (
-              <tr key={f.item_id} className={sel.has(f.item_id) ? 'is-selected' : ''}>
-                <td className="mod-check"><input type="checkbox" checked={sel.has(f.item_id)} onChange={() => alternar(f.item_id)} aria-label={`Seleccionar ${f.nombre_base}`} /></td>
-                <td>
-                  <b>{f.codigo}</b> · {f.nombre_base}
-                  <span className="pm-chico">
-                    {f.linea ?? 'Sin línea'}{f.exclusivo ? ' · solo este proveedor' : ''}
-                    {f.agotados_pendientes ? ` · hay ${f.agotados_pendientes} en agotados pendientes` : ''}
-                  </span>
-                </td>
-                <td>{f.referencia ?? '—'}</td>
-                <td>{pesos(f.precio_lista)}</td>
-                <td><input className="ui-input ui-input--sm" style={{ width: 80 }} inputMode="decimal" value={cant[f.item_id] ?? ''} placeholder={cantDefecto || '—'}
-                  onChange={(e) => setCant({ ...cant, [f.item_id]: e.target.value })} aria-label={`Cantidad de ${f.nombre_base}`} /></td>
-                <td><button type="button" className="ui-btn ui-btn--sm" onClick={() => agregar([f.item_id], `${f.nombre_base} agregado`)}>Agregar</button></td>
-              </tr>
-            ))}
-            {filas.length === 0 && <tr><td colSpan={6}>No hay productos de este proveedor por agregar con ese filtro.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <p className="mod-text mod-mt-0">Productos que este proveedor suministra y aún no están en una compra. Elige varios (o todos los resultados de una línea) y entran con su precio del ERP.</p>
+      <SelectorProductos supabase={supabase} organizacionId={organizacionId} compraId={d.compra.id} proveedorFijo={prov.proveedor_id}
+        textoAceptar={(n) => `Agregar ${n} producto(s)`}
+        onAceptar={async (items) => { const r = await llamar('compra_agregar_items', { p_compra: d.compra.id, p_items: items.map((i) => ({ ...i, sin_agotados: true })) }, `${items.length} producto(s) agregados`); if (r.ok) onCerrar(); }} />
     </Modal>
   );
 }

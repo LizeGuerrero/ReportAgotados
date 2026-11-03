@@ -11,6 +11,8 @@ export interface ContextoOrg {
     pedidos: boolean;
     items: boolean;
     proveedores: boolean;
+    /** Mensajes de Pedidos (estructuras de solicitudes de cotización y órdenes de compra). */
+    mensajes: boolean;
     /** Cuentas por pagar: cartera pendiente. */
     cxp: boolean;
     /** Cuentas por pagar: documentos pagados. */
@@ -52,12 +54,13 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
       p_accion: 'ver',
     });
 
-  const [perfil, agotados, pedidos, items, proveedores, cxp, cxpPagos, cxpReglas, cxpImportar, cxpMensajes, admin] = await Promise.all([
+  const [perfil, agotados, pedidos, items, proveedores, mensajes, cxp, cxpPagos, cxpReglas, cxpImportar, cxpMensajes, admin] = await Promise.all([
     supabase.from('profiles').select('nombres, apellidos, username').eq('id', user.id).maybeSingle(),
     permiso('reporte_agotados'),
     permiso('pedidos'),
     permiso('Items'),
     permiso('Proveedores'),
+    permiso('mensajes'),
     permiso('cxp'),
     permiso('cxp_pagos'),
     permiso('cxp_reglas'),
@@ -82,6 +85,7 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
       pedidos: pedidos.data === true,
       items: items.data === true,
       proveedores: proveedores.data === true,
+      mensajes: mensajes.data === true,
       cxp: cxp.data === true,
       cxpPagos: cxpPagos.data === true,
       cxpReglas: cxpReglas.data === true,

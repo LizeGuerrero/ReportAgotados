@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Inicio, { type Destino } from '@/components/pedidos/Inicio';
 import Necesidades from '@/components/pedidos/Necesidades';
@@ -23,6 +24,11 @@ export default function PedidosCompras({ organizacionId }: { organizacionId: str
   const permisos = usePermisosPedidos(supabase, organizacionId);
   const [pestana, setPestana] = useState<Pestana>('inicio');
   const [compraId, setCompraId] = useState<string | null>(null);
+  const { slug } = useParams<{ slug: string }>();
+  const [verMensajes, setVerMensajes] = useState(false);
+  useEffect(() => {
+    supabase.rpc('tiene_permiso', { p_organizacion_id: organizacionId, p_modulo: 'mensajes', p_accion: 'ver' }).then(({ data }) => setVerMensajes(data === true));
+  }, [supabase, organizacionId]);
 
   const ir = (d: Destino) => { setPestana(d.pestana); setCompraId(d.pestana === 'compras' ? (d.compraId ?? null) : null); };
   const abrirCompra = (id: string) => ir({ pestana: 'compras', compraId: id });
@@ -38,6 +44,8 @@ export default function PedidosCompras({ organizacionId }: { organizacionId: str
 
   return (
     <div>
+      {/* Dentro de una compra el menú general se oculta (una sola fila de pestañas); "← Compras" regresa a él. */}
+      {!(pestana === 'compras' && compraId) && (
       <div className="mod-tabs" role="tablist">
         {pestanas.map((p) => (
           <button key={p.valor} type="button" role="tab" aria-selected={pestana === p.valor} aria-current={pestana === p.valor}
@@ -46,12 +54,16 @@ export default function PedidosCompras({ organizacionId }: { organizacionId: str
             {p.texto}
           </button>
         ))}
+        {verMensajes && (
+          <a className="mod-tab" href={`/app/${slug}/mensajes`} style={{ marginLeft: 'auto' }} title="Estructuras de los mensajes a proveedores (cotizaciones y órdenes)">✉ Mensajes</a>
+        )}
       </div>
+      )}
 
       {pestana === 'inicio' && <Inicio supabase={supabase} organizacionId={organizacionId} onIr={ir} />}
       {pestana === 'agotados' && <Necesidades supabase={supabase} organizacionId={organizacionId} permisos={permisos} onAbrirCompra={abrirCompra} />}
       {pestana === 'compras' && (compraId
-        ? <Mesa supabase={supabase} organizacionId={organizacionId} compraId={compraId} permisos={permisos} onVolver={() => setCompraId(null)} onAbrirCompra={abrirCompra} />
+        ? <Mesa key={compraId} supabase={supabase} organizacionId={organizacionId} compraId={compraId} permisos={permisos} onVolver={() => setCompraId(null)} onAbrirCompra={abrirCompra} />
         : <ListaCompras supabase={supabase} organizacionId={organizacionId} permisos={permisos} onAbrir={abrirCompra} onIrANecesidades={() => ir({ pestana: 'agotados' })} />)}
       {pestana === 'ordenes' && <OrdenesCompra supabase={supabase} organizacionId={organizacionId} permisos={permisos} onAbrirCompra={abrirCompra} />}
       {pestana === 'historial' && <Historial supabase={supabase} organizacionId={organizacionId} onAbrirCompra={abrirCompra} />}

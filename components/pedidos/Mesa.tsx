@@ -10,10 +10,10 @@ import PorProveedor from '@/components/pedidos/PorProveedor';
 import Decision from '@/components/pedidos/Decision';
 import Historial from '@/components/pedidos/Historial';
 import OrdenesCompra from '@/components/pedidos/OrdenesCompra';
-import { ESTADO_COMPRA, numeroCompra, type CompraDetalle } from '@/components/pedidos/tipos';
+import { numeroCompra, type CompraDetalle } from '@/components/pedidos/tipos';
 import { resumenCompra, siguientePaso, type Pestana } from '@/components/pedidos/reglas';
 import { pesos } from '@/components/pedidos/comun';
-import { Badge, Etapas, Vacio, textoError } from '@/components/pedidos/ui';
+import { Etapas, Vacio, textoError } from '@/components/pedidos/ui';
 
 /**
  * La MESA DE COMPRA: un solo lugar donde viven los productos, las ofertas, la decisión y las órdenes de una compra.
@@ -54,36 +54,43 @@ export default function Mesa({
 function Contenido({ onVolver, onAbrirCompra }: { onVolver: () => void; onAbrirCompra: (id: string) => void }) {
   const { d, editable, permisos, llamar, aviso, supabase, organizacionId, recargar } = useMesa();
   const [pestana, setPestana] = useState<Pestana>('productos');
-  const e = ESTADO_COMPRA[d.compra.estado];
   const guia = siguientePaso(d);
   const res = resumenCompra(d);
-  const pct = d.lineas.length ? Math.round((res.completas.length / d.lineas.length) * 100) : 0;
   const pestanas: [Pestana, string][] = [
     ['productos', 'Productos y ofertas'], ['proveedores', 'Por proveedor'], ['decision', 'Decisión'],
     ['ordenes', `Órdenes (${d.ordenes.length})`], ['historial', 'Historial'],
   ];
 
+  const resumenLinea = `${d.lineas.length} producto(s) · ${d.proveedores.length} proveedor(es) · ${res.completas.length}/${d.lineas.length} asignados${res.total > 0 ? ` · ${pesos(res.total)} decidido` : ''}`;
+
   return (
     <div>
-      <div className="pm-cab">
-        <div>
-          <div className="mod-sub"><button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onVolver}>← Compras</button></div>
-          <h2 className="mod-h2 mod-mt-0">{numeroCompra(d.compra.numero)} · {d.compra.titulo} <Badge tono={e.tono}>{e.texto}</Badge></h2>
-          <Etapas estado={d.compra.estado} />
-        </div>
-        <div className="pm-resumen">
-          <div className="pm-fila"><span className="mod-sub">Productos</span><strong>{d.lineas.length}</strong></div>
-          <div className="pm-fila"><span className="mod-sub">Proveedores consultados</span><strong>{d.proveedores.length}</strong></div>
-          <div className="pm-fila"><span className="mod-sub">Asignados</span><strong>{res.completas.length}/{d.lineas.length}</strong></div>
-          <div className="pm-prog"><i style={{ width: `${pct}%` }} /></div>
-          <div className="pm-fila mod-mt-1"><span className="mod-sub">Decidido (c/IVA y flete)</span><strong>{pesos(res.total)}</strong></div>
-        </div>
-      </div>
-
-      <div className="pm-guia" role="note">
-        <div><strong>Siguiente paso:</strong> {guia.texto}</div>
+      {/* Una sola cabecera: título, etapa, resumen y acciones. Sin tarjetas ni barras duplicadas. */}
+      <div className="pm-cabecera">
+        <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={onVolver}>← Compras</button>
+        <h2 className="mod-h2 mod-mt-0 mod-mb-0 pm-cabecera__titulo">{numeroCompra(d.compra.numero)} · {d.compra.titulo}</h2>
         <span className="pm-sep" />
-        {guia.ir && guia.ir !== pestana && <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => setPestana(guia.ir as Pestana)}>Ir</button>}
+        {permisos.crear && (
+          <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" title="Misma compra: productos, cantidades, proveedores y asignaciones, con los precios del ERP"
+            onClick={async () => { const r = await llamar('compra_copiar', { p_compra: d.compra.id, p_titulo: null, p_con_asignaciones: true }, 'Compra copiada'); if (r.ok && typeof r.data === 'string') onAbrirCompra(r.data); }}>Copiar compra</button>
+        )}
+        {permisos.editar && editable && (
+          <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost"
+            onClick={async () => {
+              if (!window.confirm(`¿Eliminar la compra ${numeroCompra(d.compra.numero)}? Sus productos y agotados quedan libres para otra compra.`)) return;
+              const r = await llamar('compra_eliminar', { p_compra: d.compra.id }, 'Compra eliminada');
+              if (r.ok) onVolver();
+            }}>Eliminar</button>
+        )}
+      </div>
+      <div className="pm-cabecera pm-cabecera--sub">
+        <Etapas estado={d.compra.estado} />
+        <span className="mod-sub">{resumenLinea}</span>
+        <span className="pm-sep" />
+        {guia.ir && guia.ir !== pestana ? (
+          <span className="mod-sub"><strong>Siguiente:</strong> {guia.texto}{' '}
+            <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => setPestana(guia.ir as Pestana)}>Ir</button></span>
+        ) : <span className="mod-sub"><strong>Siguiente:</strong> {guia.texto}</span>}
       </div>
 
       {aviso && <p className={aviso.tipo === 'error' ? 'mod-error' : 'mod-notice mod-text'} role={aviso.tipo === 'error' ? 'alert' : 'status'}>{aviso.texto}</p>}
@@ -107,15 +114,6 @@ function Contenido({ onVolver, onAbrirCompra }: { onVolver: () => void; onAbrirC
       )}
       {pestana === 'historial' && <Historial supabase={supabase} organizacionId={organizacionId} compraId={d.compra.id} />}
 
-      {editable && d.lineas.length > 0 && pestana !== 'decision' && (
-        <div className="pm-barra" role="region" aria-label="Resumen de la compra">
-          <span><strong>{res.completas.length}</strong> de {d.lineas.length} productos asignados</span>
-          <span><strong>{res.proveedores.length}</strong> proveedor(es)</span>
-          <span>Total decidido: <strong>{pesos(res.total)}</strong></span>
-          <span className="pm-sep" />
-          <button type="button" className="ui-btn ui-btn--primary" onClick={() => setPestana('decision')}>Revisar decisión →</button>
-        </div>
-      )}
     </div>
   );
 }
