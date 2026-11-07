@@ -8,6 +8,8 @@ import '@/styles/app.css';
 import '@/styles/agotados.css';
 import '@/styles/organizaciones.css';
 import '@/styles/modulos.css';
+import '@/styles/presencia.css';
+import '@/styles/configuracion.css';
 
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },

@@ -301,6 +301,13 @@ export default function PanelConfiguracion({
                       </label>
                     )}
                     {conTramos && (
+                      <fieldset className="cxp-panel__grupo">
+                        <legend>Color de «Días venc.»</legend>
+                        {radio<PrefsHoja['escalaDias']>('escalaDias', 'relativa', prefs.escalaDias, 'Relativo: blanco → rojo según el más vencido que se ve', (v) => onPrefs({ ...prefs, escalaDias: v }))}
+                        {radio<PrefsHoja['escalaDias']>('escalaDias', 'fija', prefs.escalaDias, 'Fijo: el rojo más fuerte se alcanza a los 90 días', (v) => onPrefs({ ...prefs, escalaDias: v }))}
+                      </fieldset>
+                    )}
+                    {conTramos && (
                       <label className="cxp-panel__fila">
                         <input type="checkbox" checked={prefs.verTramos} onChange={(e) => onPrefs({ ...prefs, verTramos: e.target.checked })} />
                         Mostrar la antigüedad de lo vencido por tramos

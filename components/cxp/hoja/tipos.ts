@@ -65,6 +65,8 @@ export interface PrefsHoja {
   verTramos: boolean;
   /** Marcar una fila al tocar cualquier parte de ella (más fácil que apuntar a la casilla). */
   clicFila: boolean;
+  /** Escala del color de «Días venc.»: relativa a lo que se ve (blanco → rojo) o fija en 90 días. */
+  escalaDias: 'relativa' | 'fija';
 }
 
 export function prefsPorDefecto(ocultas: string[] = []): PrefsHoja {
@@ -84,6 +86,7 @@ export function prefsPorDefecto(ocultas: string[] = []): PrefsHoja {
     orden: [],
     verTramos: true,
     clicFila: true,
+    escalaDias: 'relativa',
   };
 }
 

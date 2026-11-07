@@ -1,11 +1,12 @@
 'use client';
 
 import '@/styles/cxp.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { AlertIcon, CheckCircleIcon } from '@/components/ui/icons';
 import { fuenteExcelErp } from '@/lib/cxp/fuentes/excelErp';
 import type { ResultadoLectura } from '@/lib/cxp/fuentes/tipos';
+import RevisionCarga, { aplicarEdicion, edicionInvalida, type Edicion } from './RevisionCarga';
 import { fechaHora, moneda } from './tipos';
 
 interface Previa {
@@ -60,6 +61,22 @@ export default function CargarCxp({ organizacionId }: { organizacionId: string }
   const [mapeo, setMapeo] = useState<Record<string, string>>({});
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [historial, setHistorial] = useState<Importacion[]>([]);
+  // Revisión manual antes de cargar: fechas corregidas y filas quitadas (por número de fila del archivo)
+  const [ediciones, setEdiciones] = useState<Record<number, Edicion>>({});
+  const [quitadas, setQuitadas] = useState<Set<number>>(new Set());
+  const [version, setVersion] = useState(0);
+  const [recalculando, setRecalculando] = useState(false);
+  const pedido = useRef(0);
+
+  // Lo que realmente se va a cargar: el archivo, menos lo quitado y con las fechas corregidas.
+  const filasFinales = useMemo(
+    () => (lectura ? lectura.filas.filter((f) => !quitadas.has(f.fila)).map((f) => aplicarEdicion(f, ediciones[f.fila])) : []),
+    [lectura, ediciones, quitadas],
+  );
+  const nInvalidas = useMemo(
+    () => (lectura ? lectura.filas.filter((f) => !quitadas.has(f.fila) && edicionInvalida(f, ediciones[f.fila])).length : 0),
+    [lectura, ediciones, quitadas],
+  );
 
   const cargarHistorial = useCallback(async () => {
     const { data } = await supabase.rpc('cxp_importaciones_listar', { p_org: organizacionId, p_limit: 10 });
@@ -79,8 +96,66 @@ export default function CargarCxp({ organizacionId }: { organizacionId: string }
     setLectura(null);
     setPrevia(null);
     setResultado(null);
+    setEdiciones({});
+    setQuitadas(new Set());
+    setVersion(0);
     if (entrada.current) entrada.current.value = '';
   }
+
+  function editarFecha(fila: number, campo: keyof Edicion, valor: string | null) {
+    setEdiciones((prev) => {
+      const sig = { ...prev, [fila]: { ...prev[fila] } };
+      if (valor === null) delete sig[fila][campo];
+      else sig[fila][campo] = valor;
+      if (Object.keys(sig[fila]).length === 0) delete sig[fila];
+      return sig;
+    });
+    setVersion((v) => v + 1);
+  }
+  function quitarFila(fila: number, quitar: boolean) {
+    setQuitadas((prev) => {
+      const sig = new Set(prev);
+      if (quitar) sig.add(fila);
+      else sig.delete(fila);
+      return sig;
+    });
+    setVersion((v) => v + 1);
+  }
+  function deshacerRevision() {
+    setEdiciones({});
+    setQuitadas(new Set());
+    setVersion((v) => v + 1);
+  }
+
+  // Al corregir o quitar filas, la vista previa (nuevos, cambios, no vienen...) se recalcula con lo que de verdad se cargará.
+  useEffect(() => {
+    if (version === 0 || !lectura || fase !== 'vista' || nInvalidas > 0 || filasFinales.length === 0) return;
+    const mio = ++pedido.current;
+    setRecalculando(true);
+    const t = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('cxp_importar_previsualizar', {
+        p_org: organizacionId,
+        p_filas: filasFinales,
+        p_hash: lectura.hash,
+      });
+      if (mio !== pedido.current) return; // llegó una respuesta más nueva
+      setRecalculando(false);
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      setError('');
+      const p = data as Previa;
+      setPrevia(p);
+      setMapeo((m) => {
+        const n = { ...m };
+        for (const co of p.cos) if (!(co.codigo in n)) n[co.codigo] = co.sede_id ?? '';
+        return n;
+      });
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [version]);
 
   async function alElegirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
@@ -90,6 +165,9 @@ export default function CargarCxp({ organizacionId }: { organizacionId: string }
     setFase('leyendo');
     try {
       const lec = await fuenteExcelErp.leer(archivo);
+      setEdiciones({});
+      setQuitadas(new Set());
+      setVersion(0);
       setLectura(lec);
       if (lec.problemas.length > 0) {
         setPrevia(null);
@@ -120,6 +198,8 @@ export default function CargarCxp({ organizacionId }: { organizacionId: string }
 
   async function confirmar() {
     if (!lectura || !previa) return;
+    if (nInvalidas > 0) return setError(`Corrige ${nInvalidas} fila(s) donde el vencimiento quedó antes de la fecha del documento.`);
+    if (filasFinales.length === 0) return setError('Quitaste todas las filas: no queda nada por cargar.');
     setError('');
     setFase('guardando');
     try {
@@ -139,7 +219,7 @@ export default function CargarCxp({ organizacionId }: { organizacionId: string }
       // 2. Carga
       const { data, error } = await supabase.rpc('cxp_importar_confirmar', {
         p_org: organizacionId,
-        p_filas: lectura.filas,
+        p_filas: filasFinales,
         p_archivo: lectura.archivo,
         p_hash: lectura.hash,
       });
@@ -288,9 +368,32 @@ export default function CargarCxp({ organizacionId }: { organizacionId: string }
             filas={previa.ausentes_lista.map((c) => [c.nombre, c.documento, moneda(c.saldo)])}
           />
 
+          <RevisionCarga
+            filas={lectura?.filas ?? []}
+            ediciones={ediciones}
+            quitadas={quitadas}
+            onEditar={editarFecha}
+            onQuitar={quitarFila}
+            onDeshacerTodo={deshacerRevision}
+            deshabilitado={ocupado}
+          />
+
+          {(Object.keys(ediciones).length > 0 || quitadas.size > 0) && (
+            <p className="ui-hint" role="status">
+              Se cargarán {filasFinales.length} de {lectura?.filas.length ?? 0} fila(s).
+              {recalculando && ' Actualizando la vista previa…'}
+              {nInvalidas > 0 && ` Hay ${nInvalidas} fila(s) con fechas por corregir.`}
+            </p>
+          )}
+
           <div className="cxp-modal__acciones">
             <button type="button" className="ui-btn" onClick={reiniciar} disabled={ocupado}>Cancelar</button>
-            <button type="button" className="ui-btn ui-btn--primary" onClick={confirmar} disabled={ocupado}>
+            <button
+              type="button"
+              className="ui-btn ui-btn--primary"
+              onClick={confirmar}
+              disabled={ocupado || recalculando || nInvalidas > 0 || filasFinales.length === 0}
+            >
               {fase === 'guardando' ? 'Cargando…' : `Cargar ${previa.nuevos + previa.actualizados} cambio(s)`}
             </button>
           </div>

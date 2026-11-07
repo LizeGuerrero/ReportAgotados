@@ -3,6 +3,7 @@ import { AppHeader } from '@/components/app/AppHeader';
 import type { ModuloNav } from '@/components/app/NavModulos';
 import { rutaEntradaCxp } from '@/lib/cxpRutas';
 import { obtenerContextoOrg } from '@/lib/orgContext';
+import { segmentosNavegables } from '@/lib/presencia/permisos';
 
 // Cabecera compartida por los módulos de la organización. No toca el contenido
 // ni los estilos de cada módulo: solo añade navegación arriba.
@@ -35,6 +36,10 @@ export default async function OrganizacionLayout({
   return (
     <>
       <AppHeader
+        organizacionId={ctx.organizacion.id}
+        slug={slug}
+        usuarioId={ctx.usuarioId}
+        segmentosPermitidos={segmentosNavegables(ctx)}
         nombreOrganizacion={ctx.organizacion.nombre}
         nombreUsuario={ctx.nombreUsuario}
         iniciales={ctx.iniciales}

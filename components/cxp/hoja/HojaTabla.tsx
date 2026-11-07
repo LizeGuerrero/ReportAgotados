@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { SortIcon } from '@/components/ui/icons';
-import { copiaEnteraDeSeleccion } from '../copiado';
+import { copiaEnteraDeSeleccion, copiarTexto, textoDeValor } from '../copiado';
 import { aplicarOrden, type AjusteTexto, type Alineacion, type ColumnaHoja, type GrupoHoja, type ModoCopiado, type PrefsHoja } from './tipos';
 
 const ANCHO_CHECK = 56;
@@ -119,10 +119,64 @@ export default function HojaTabla<T>({
   const ajusteDe = (c: ColumnaHoja<T>): AjusteTexto => (c.ajustable ? (prefs.ajustes[c.clave] ?? prefs.ajuste) : 'puntos');
   const alineacionDe = (c: ColumnaHoja<T>): Alineacion => prefs.alineaciones[c.clave] ?? (c.alinear === 'der' ? 'der' : 'izq');
 
+  // ---- Copiar una celda con un clic en su zona de copiado (no marca la fila ni abre la edición) ----
+  const [celdaActiva, setCeldaActiva] = useState<{ id: string; clave: string } | null>(null);
+  const [copiada, setCopiada] = useState(false);
+  const aviso = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Lo que se copia de una celda: el valor en pesos según la preferencia, o el texto tal como se ve. */
+  function textoDeCelda(c: ColumnaHoja<T>, f: T, td: HTMLElement | null): string {
+    const v = c.copia?.(f);
+    if (v !== null && v !== undefined && v !== 0) return textoDeValor(v, modoCopiado);
+    const visto = (td?.innerText ?? '').replace(/\s+/g, ' ').trim();
+    return visto === '—' ? '' : visto;
+  }
+  async function copiarCelda(e: React.MouseEvent, c: ColumnaHoja<T>, f: T) {
+    e.stopPropagation(); // no es un clic de fila
+    const td = (e.currentTarget as HTMLElement).closest('td') as HTMLElement | null;
+    setCeldaActiva({ id: idFila(f), clave: c.clave });
+    const texto = textoDeCelda(c, f, td);
+    if (texto === '') return;
+    try {
+      await copiarTexto(texto);
+      setCopiada(true);
+      if (aviso.current) clearTimeout(aviso.current);
+      aviso.current = setTimeout(() => setCopiada(false), 1500);
+    } catch {
+      setCopiada(false);
+    }
+  }
+  // La celda marcada se suelta al tocar cualquier otra parte.
+  useEffect(() => {
+    if (!celdaActiva) return;
+    const fuera = (e: PointerEvent) => {
+      if (!(e.target as HTMLElement).closest('.is-celda-activa')) {
+        setCeldaActiva(null);
+        setCopiada(false);
+      }
+    };
+    window.addEventListener('pointerdown', fuera);
+    return () => window.removeEventListener('pointerdown', fuera);
+  }, [celdaActiva]);
+
   // Con «entero» activo, Ctrl+C dentro de la tabla deja los valores en pesos como números sin formato.
   function alCopiar(e: React.ClipboardEvent) {
-    if (modoCopiado !== 'entero') return;
     const sel = window.getSelection();
+    // Sin texto seleccionado y con una celda marcada: Ctrl+C copia esa celda.
+    if (celdaActiva && (!sel || sel.isCollapsed)) {
+      const f = filas.find((x) => idFila(x) === celdaActiva.id);
+      const c = visibles.find((x) => x.clave === celdaActiva.clave);
+      if (f && c) {
+        const td = (e.currentTarget as HTMLElement).querySelector('td.is-celda-activa') as HTMLElement | null;
+        const texto = textoDeCelda(c, f, td);
+        if (texto !== '') {
+          e.preventDefault();
+          e.clipboardData.setData('text/plain', texto);
+        }
+      }
+      return;
+    }
+    if (modoCopiado !== 'entero') return;
     if (!sel || sel.isCollapsed) return;
     const nuevo = copiaEnteraDeSeleccion(sel);
     if (nuevo === null) return;
@@ -352,12 +406,26 @@ export default function HojaTabla<T>({
               {visibles.map((c) => (
                 <td
                   key={c.clave}
-                  className={claseColumna(c, `aj-${ajusteDe(c)}`)}
+                  className={claseColumna(c, `aj-${ajusteDe(c)}${celdaActiva?.id === idFila(f) && celdaActiva.clave === c.clave ? ' is-celda-activa' : ''}`)}
                   style={{ ...estiloFijo(c), ...c.estiloCelda?.(f) }}
                   title={c.tooltip?.(f) ?? undefined}
                   data-copia={copiaDe(c, f)}
                 >
                   {c.render(f)}
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className={celdaActiva?.id === idFila(f) && celdaActiva.clave === c.clave && copiada ? 'cxp-copiar is-ok' : 'cxp-copiar'}
+                    aria-label={`Copiar ${c.titulo}`}
+                    title="Copiar esta celda"
+                    onClick={(e) => copiarCelda(e, c, f)}
+                  >
+                    {celdaActiva?.id === idFila(f) && celdaActiva.clave === c.clave && copiada ? (
+                      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    ) : (
+                      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="8" height="9" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M3 11V3.5A1.5 1.5 0 014.5 2H10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                    )}
+                  </button>
                 </td>
               ))}
               {acciones && <td className="cxp-hoja__acc">{acciones(f)}</td>}

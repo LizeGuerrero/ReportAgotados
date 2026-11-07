@@ -100,6 +100,15 @@ export default function Matriz() {
       setRevision(Object.fromEntries(((data ?? []) as { item_id: number; motivos: string[] }[]).map((x) => [x.item_id, x.motivos]))));
   }, [supabase, organizacionId, idsItems]);
 
+  // Al entrar con productos sin cantidad, el cursor queda listo en la primera: se escribe, Enter y sigue la siguiente.
+  const sinConfirmar = lineas.filter((l) => !l.cantidad_confirmada && !l.ordenada).length;
+  useEffect(() => {
+    if (!puedeOfertar || sinConfirmar === 0 || document.activeElement?.tagName === 'INPUT') return;
+    const primero = lineas.findIndex((l) => !l.cantidad_confirmada && !l.ordenada);
+    if (primero >= 0) document.querySelector<HTMLInputElement>(`input[data-qty="${primero}"]`)?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsItems, puedeOfertar]);
+
   /* ---------- deshacer ---------- */
   const deshacerOferta = (l: LineaCompra, p: ProveedorCompra, o: OfertaCompra | undefined) => ({
     texto: `${l.nombre} · ${p.nombre}`,
@@ -376,8 +385,14 @@ export default function Matriz() {
                           key={`${l.id}-${l.cantidad}-${l.cantidad_confirmada}`} className="ui-input ui-input--sm" inputMode="decimal"
                           style={{ width: 84, borderColor: l.cantidad_confirmada ? undefined : 'var(--color-warning, #d97706)' }}
                           defaultValue={l.cantidad_confirmada ? String(l.cantidad) : ''} placeholder="cantidad" disabled={!puedeOfertar || l.ordenada}
-                          aria-label={`Cantidad de ${l.nombre}`}
-                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          aria-label={`Cantidad de ${l.nombre}`} data-qty={li}
+                          onFocus={(e) => e.currentTarget.select()}
+                          onKeyDown={(e) => {
+                            // Enter o ↓ guarda y pasa a la cantidad del producto siguiente; ↑ a la anterior
+                            const vecino = (k: number) => document.querySelector<HTMLInputElement>(`input[data-qty="${li + k}"]:not(:disabled)`);
+                            if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); const sig = vecino(1); if (sig) sig.focus(); else e.currentTarget.blur(); }
+                            else if (e.key === 'ArrowUp') { e.preventDefault(); vecino(-1)?.focus(); }
+                          }}
                           onBlur={(e) => {
                             const t = e.currentTarget.value.trim();
                             if (t === '') return;

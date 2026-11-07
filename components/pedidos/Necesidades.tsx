@@ -129,7 +129,7 @@ export default function Necesidades({
     const falta = false;
     return (
       <tr key={clave(n)} className={sel.has(clave(n)) ? 'is-selected is-clickable' : pend ? 'is-clickable' : ''} onClick={() => alternar(n)}>
-        <td className="mod-check" onClick={(e) => e.stopPropagation()}>
+        <td className="pm-ck" onClick={(e) => e.stopPropagation()}>
           <input type="checkbox" tabIndex={-1} disabled={!pend} checked={sel.has(clave(n))} onChange={() => alternar(n)} aria-label={`Seleccionar ${n.nombre_base}`} />
         </td>
         <td><b>{idVisible(n.item_id, false, n.codigo)}</b><span className="pm-chico">{n.linea ?? 'Sin línea'}</span></td>
@@ -224,7 +224,7 @@ export default function Necesidades({
           <table className="mod-table">
             <thead>
               <tr>
-                <th className="mod-check">
+                <th className="pm-ck">
                   <input type="checkbox" tabIndex={-1} checked={todasMarcadas} disabled={pendientes.length === 0} onChange={(e) => marcarTodas(e.target.checked)}
                     aria-label="Seleccionar todos los pendientes visibles" />
                 </th>

@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 
 export interface ContextoOrg {
   organizacion: { id: string; nombre: string; slug: string };
+  /** Id del usuario autenticado (auth.users). */
+  usuarioId: string;
   nombreUsuario: string;
   iniciales: string;
   /** Módulos que el usuario puede ver, según tiene_permiso() en la base de datos. */
@@ -78,6 +80,7 @@ export const obtenerContextoOrg = cache(async (slug: string): Promise<ContextoOr
 
   return {
     organizacion,
+    usuarioId: user.id,
     nombreUsuario,
     iniciales,
     permisos: {

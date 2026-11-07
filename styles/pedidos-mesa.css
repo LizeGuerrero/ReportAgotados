@@ -133,3 +133,14 @@
 
 .pm-notas { margin: 0 0 0.75rem; }
 .pm-notas > summary { cursor: pointer; font-weight: 600; padding: 0.375rem 0; }
+
+/* ---- selector de productos dentro de ventana: alto propio, sin desbordes ni botones montados ---- */
+.pm-tabla-selector { max-height: max(11rem, calc(100vh - 27.5rem)); overflow: auto; margin-top: 0.5rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background-color: var(--color-surface); }
+.pm-tabla-selector table { width: 100%; }
+.pm-tabla-selector thead th { position: sticky; top: 0; z-index: 1; background-color: var(--color-table-head); }
+.pm-tabla-selector td:nth-child(2) { white-space: nowrap; }
+.pm-pager-selector { position: static; margin-top: 0.5rem; }
+
+/* Celda de selección: celda de tabla normal (mod-check es flex y descuadra las filas) */
+.mod-table td.pm-ck, .mod-table th.pm-ck { width: 2.25rem; text-align: center; vertical-align: middle; padding-left: 0.5rem; padding-right: 0.5rem; }
+.pm-ck input { accent-color: var(--color-primary); cursor: pointer; }

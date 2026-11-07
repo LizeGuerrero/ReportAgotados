@@ -26,3 +26,19 @@ grant usage on schema public to anon, authenticated, service_role;
 create schema if not exists extensions;
 create extension if not exists unaccent with schema extensions;
 grant usage on schema extensions to anon, authenticated, service_role;
+
+-- Esquema "realtime" de Supabase (lo mínimo): la tabla donde se aplican las políticas de los canales
+-- privados y realtime.topic(), que en Supabase devuelve el tema del canal que se está autorizando.
+create schema if not exists realtime;
+create table if not exists realtime.messages (
+  id uuid primary key default gen_random_uuid(),
+  topic text not null,
+  extension text not null,
+  payload jsonb,
+  inserted_at timestamptz not null default now()
+);
+alter table realtime.messages enable row level security;
+create or replace function realtime.topic() returns text language sql stable as
+  $$ select nullif(current_setting('realtime.topic', true), '') $$;
+grant usage on schema realtime to anon, authenticated, service_role;
+grant select, insert on realtime.messages to authenticated;

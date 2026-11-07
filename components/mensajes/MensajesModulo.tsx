@@ -1,35 +1,51 @@
 'use client';
 
-import { useState } from 'react';
-import EstructurasMensajes from '@/components/mensajes/EstructurasMensajes';
-import MensajesConfig from '@/components/cxp/MensajesConfig';
-
-type Pestana = 'pedidos' | 'cxp';
+import '@/styles/mensajes.css';
+import { useCallback, useRef, useState } from 'react';
+import CxpMensajes from './CxpMensajes';
+import Workspace from './Workspace';
+import { TIPOS, esCxp, type Tipo } from './tipos';
 
 /**
- * Módulo único de Mensajes: una pestaña por cada proceso que envía mensajes a proveedores. Hoy: Pedidos (solicitudes
- * de cotización y órdenes de compra, con estructuras con nombre) y Cuentas por pagar (aviso de pago).
+ * Módulo único de Mensajes. Navegación a la izquierda por proceso (Pedidos y Cuentas por pagar) y tipo de mensaje;
+ * a la derecha el espacio de trabajo. Todos los tipos comparten la misma mecánica: la Estándar protegida, estructuras
+ * propias independientes, variables comunes y asignación por proveedor.
  */
 export default function MensajesModulo({
   organizacionId, empresa, usuario, puedeEditarPedidos, verPedidos, verCxp,
 }: {
   organizacionId: string; empresa: string; usuario: string; puedeEditarPedidos: boolean; verPedidos: boolean; verCxp: boolean;
 }) {
-  const pestanas = ([verPedidos && { valor: 'pedidos', texto: 'Pedidos' }, verCxp && { valor: 'cxp', texto: 'Cuentas por pagar' }].filter(Boolean)) as { valor: Pestana; texto: string }[];
-  const [pestana, setPestana] = useState<Pestana>(pestanas[0]?.valor ?? 'pedidos');
+  const disponibles = TIPOS.filter((t) => (esCxp(t.valor) ? verCxp : verPedidos));
+  const [tipo, setTipo] = useState<Tipo>(disponibles[0]?.valor ?? 'solicitud_cotizacion');
+  const sucio = useRef(false);
+  const alSucio = useCallback((s: boolean) => { sucio.current = s; }, []);
+
+  const ir = (t: Tipo) => {
+    if (t === tipo) return;
+    if (sucio.current && !window.confirm('Tienes cambios sin guardar. ¿Descartarlos?')) return;
+    sucio.current = false;
+    setTipo(t);
+  };
+  const grupos = Array.from(new Set(disponibles.map((t) => t.grupo)));
 
   return (
-    <div>
-      {pestanas.length > 1 && (
-        <div className="mod-tabs" role="tablist">
-          {pestanas.map((p) => (
-            <button key={p.valor} type="button" role="tab" aria-selected={pestana === p.valor} aria-current={pestana === p.valor}
-              className={pestana === p.valor ? 'mod-tab is-active' : 'mod-tab'} onClick={() => setPestana(p.valor)}>{p.texto}</button>
-          ))}
-        </div>
-      )}
-      {pestana === 'pedidos' && verPedidos && <EstructurasMensajes organizacionId={organizacionId} puedeEditar={puedeEditarPedidos} />}
-      {pestana === 'cxp' && verCxp && <MensajesConfig organizacionId={organizacionId} empresa={empresa} usuario={usuario} />}
+    <div className="msj msj-modulo">
+      <nav className="msj-nav" aria-label="Tipos de mensaje">
+        {grupos.map((g) => (
+          <div key={g} className="msj-nav__grupo">
+            <div className="msj-nav__titulo">{g}</div>
+            {disponibles.filter((t) => t.grupo === g).map((t) => (
+              <button key={t.valor} type="button" className={tipo === t.valor ? 'msj-nav__item is-on' : 'msj-nav__item'} aria-current={tipo === t.valor} onClick={() => ir(t.valor)}>{t.texto}</button>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="msj-modulo__main">
+        {esCxp(tipo)
+          ? <CxpMensajes key={tipo} organizacionId={organizacionId} empresa={empresa} usuario={usuario} onSucio={alSucio} />
+          : <Workspace key={tipo} organizacionId={organizacionId} tipo={tipo} puedeEditar={puedeEditarPedidos} empresa={empresa} usuario={usuario} onSucio={alSucio} />}
+      </div>
     </div>
   );
 }

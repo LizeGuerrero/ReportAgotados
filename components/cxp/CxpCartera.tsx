@@ -3,7 +3,7 @@
 import '@/styles/cxp.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { colorDias } from '@/lib/cxp/colorDias';
+import { colorDias, colorDiasRelativo } from '@/lib/cxp/colorDias';
 import { AlertIcon, SearchIcon } from '@/components/ui/icons';
 import ComboProveedor, { claveProveedor } from './ComboProveedor';
 import CrucesCxp from './CrucesCxp';
@@ -507,6 +507,9 @@ export default function CxpCartera({
     ...(esPagados ? [{ clave: 'pago', titulo: 'Pago' }] : []),
   ];
 
+  // El más vencido de las filas que se ven fija el rojo más fuerte (escala relativa).
+  const maxDias = filas.reduce((m, f) => Math.max(m, f.dias_venc), 0);
+
   const columnas: ColumnaHoja<FilaCxp>[] = [
     {
       clave: 'origen', titulo: 'En sistema', grupo: 'proveedor', ancho: 96,
@@ -536,14 +539,14 @@ export default function CxpCartera({
     { clave: 'documento_erp', titulo: 'Doc. ERP', grupo: 'documento', ancho: 130, ajustable: true, tooltip: (f) => f.documento_erp, render: (f) => f.documento_erp ?? '' },
     { clave: 'cond_pago', titulo: 'Cond. pago', grupo: 'documento', ancho: 170, ajustable: true, tooltip: (f) => f.cond_pago, render: (f) => f.cond_pago ?? '' },
     { clave: 'docto', titulo: 'Factura prov.', grupo: 'documento', ancho: 130, ajustable: true, tooltip: (f) => f.docto_proveedor, render: (f) => f.docto_proveedor ?? '' },
-    { clave: 'fecha_dcto', titulo: 'F. documento', grupo: 'documento', ancho: 112, orden: 'fecha_dcto', render: (f) => fechaCorta(f.fecha_dcto) },
-    { clave: 'fecha_vcto', titulo: 'F. vencimiento', grupo: 'documento', ancho: 122, orden: 'fecha_vcto', resumen: true, render: (f) => fechaCorta(f.fecha_vcto) },
+    { clave: 'fecha_dcto', titulo: 'F. documento', grupo: 'documento', ancho: 112, orden: 'fecha_dcto', render: (f) => <FechaCartera fecha={f.fecha_dcto} corregida={f.dcto_corregido} original={f.dcto_erp} /> },
+    { clave: 'fecha_vcto', titulo: 'F. vencimiento', grupo: 'documento', ancho: 122, orden: 'fecha_vcto', resumen: true, render: (f) => <FechaCartera fecha={f.fecha_vcto} corregida={f.vcto_corregido} original={f.vcto_erp} /> },
     { clave: 'plazo', titulo: 'Plazo', grupo: 'documento', ancho: 70, alinear: 'der', render: (f) => f.plazo ?? '' },
     {
       clave: 'dias', titulo: 'Días venc.', grupo: 'documento', ancho: 96, orden: 'dias_venc', alinear: 'der',
       // Blanca si no está vencida; cada vez más roja entre más días de vencida (solo en la cartera pendiente).
       estiloCelda: (f) => {
-        const c = esPend ? colorDias(f.dias_venc) : null;
+        const c = !esPend ? null : prefs.escalaDias === 'fija' ? colorDias(f.dias_venc) : colorDiasRelativo(f.dias_venc, maxDias);
         return c ? { backgroundColor: c.fondo, color: c.texto, fontWeight: 700 } : undefined;
       },
       render: (f) => f.dias_venc,
@@ -1011,6 +1014,17 @@ function Kpi({
     </button>
   ) : (
     <div className={clases}>{contenido}</div>
+  );
+}
+
+/** Fecha de la cartera. Si se corrigió a mano al cargar el ERP lleva «*» delante (puesto por CSS, así no se copia). */
+function FechaCartera({ fecha, corregida, original }: { fecha: string | null; corregida: boolean; original: string | null }) {
+  if (!corregida) return <>{fechaCorta(fecha)}</>;
+  const texto = fechaCorta(fecha);
+  return (
+    <span className="cxp-fecha-corr" title={`Corregida a mano. El ERP trae: ${fechaCorta(original) || 'sin fecha'}`} aria-label={`${texto}, corregida a mano`}>
+      {texto}
+    </span>
   );
 }
 

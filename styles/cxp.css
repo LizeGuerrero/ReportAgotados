@@ -1267,3 +1267,106 @@ label.cxp-panel__fila {
   .cxp-config__fila { grid-template-columns: 1fr 1fr; }
   .cxp-config__fila--cab { display: none; }
 }
+
+/* Lista de terceros del formulario de pendientes */
+.cxp-suggest__nuevo {
+  font-weight: 700;
+  border-top: 1px solid var(--color-border-subtle, #e5e7eb);
+}
+.cxp-suggest__list .ui-combo__empty {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, #6b7280);
+}
+.cxp-nuevo-tercero {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--color-surface-hover, #f3f4f6);
+  border: 1px dashed var(--color-border, #d1d5db);
+  border-radius: var(--radius-lg);
+}
+
+/* ---------- Copiar una celda: zona propia dentro de la celda (no marca la fila ni abre la edición) ---------- */
+.cxp-hoja td:not(.cxp-hoja__cong):not(.cxp-hoja__check) {
+  position: relative;
+}
+.cxp-copiar {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  padding: 0;
+  color: var(--color-text-muted, #6b7280);
+  background-color: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: var(--radius-sm, 0.375rem);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  cursor: copy;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.1s;
+}
+/* En columnas alineadas a la derecha (los valores) la zona va a la izquierda, para no tapar el número */
+.cxp-hoja td.al-der .cxp-copiar,
+.cxp-hoja td.cxp-num .cxp-copiar {
+  right: auto;
+  left: 2px;
+}
+.cxp-hoja td.al-izq .cxp-copiar { right: 2px; left: auto; }
+.cxp-hoja td.al-centro .cxp-copiar { right: 2px; left: auto; }
+.cxp-hoja td:hover > .cxp-copiar,
+.cxp-hoja td.is-celda-activa > .cxp-copiar,
+.cxp-copiar:focus-visible {
+  opacity: 1;
+}
+.cxp-copiar:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong, #9ca3af);
+}
+.cxp-copiar:focus-visible {
+  outline: 2px solid var(--color-accent, #2563eb);
+  outline-offset: 1px;
+}
+.cxp-copiar.is-ok {
+  color: var(--color-success, #166534);
+  border-color: var(--color-success, #166534);
+}
+/* Celda marcada: se ve cuál es la que Ctrl+C va a copiar */
+.cxp-hoja td.is-celda-activa {
+  outline: 2px solid var(--color-accent, #2563eb);
+  outline-offset: -2px;
+}
+@media (hover: none) {
+  .cxp-copiar { opacity: 0.55; }
+}
+
+/* ---------- Fechas corregidas a mano (el «*» es CSS: no se copia ni se ordena) ---------- */
+.cxp-fecha-corr {
+  font-weight: 700;
+  color: var(--color-warning-strong, #92400e);
+}
+.cxp-fecha-corr::before {
+  content: '* ';
+}
+
+/* ---------- Revisión de filas antes de cargar el ERP ---------- */
+.cxp-rev__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+}
+.cxp-rev__barra .ag-search { flex: 1 1 16rem; max-width: 26rem; }
+.cxp-rev__tabla input[type='date'] { min-width: 8.5rem; }
+.cxp-rev__tabla tr.is-quitada td { color: var(--color-text-subtle, #6b7280); text-decoration: line-through; background-color: var(--color-surface-hover, #f3f4f6); }
+.cxp-rev__tabla tr.is-quitada input { text-decoration: none; }
+.cxp-rev__celda { display: flex; align-items: center; gap: 0.25rem; }
+.cxp-rev__celda.is-corregida input { border-color: var(--color-warning-strong, #92400e); background-color: var(--color-warning-soft, #fef3c7); }
+.cxp-rev__celda.is-corregida::before { content: '*'; font-weight: 700; color: var(--color-warning-strong, #92400e); }
+.cxp-rev__celda.is-invalida input { border-color: var(--color-danger, #b91c1c); }
+.cxp-rev__error { color: var(--color-danger, #b91c1c); font-size: 0.75rem; }
+.cxp-rev__nota { font-size: 0.75rem; color: var(--color-text-muted, #6b7280); }

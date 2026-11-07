@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Pruebas de interfaz del panel de administración (aisladas del package.json del proyecto).",
   "scripts": {
-    "test": "node run.mjs roleditor.test.tsx && node run.mjs paneles.test.tsx"
+    "test": "node run.mjs roleditor.test.tsx && node run.mjs paneles.test.tsx && node run.mjs presencia.test.tsx"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",

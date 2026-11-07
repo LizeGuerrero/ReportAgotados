@@ -48,8 +48,3 @@ supabase/
 
 cxp.zip
 backups/
-# Respaldos locales
-Backapp antes mensajes/
-
-# Archivos ZIP locales
-*.zip

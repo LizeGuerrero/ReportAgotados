@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Combobox from '@/components/Combobox';
 import SelectorLinea from '@/components/SelectorLinea';
-import TablaExcel from '@/components/TablaExcel';
 import { numeroDeTexto } from '@/components/pedidos/reglas';
 import { idVisible, pesos } from '@/components/pedidos/comun';
 import { numeroCompra } from '@/components/pedidos/tipos';
@@ -15,7 +14,8 @@ export interface FilaCatalogo {
   referencia: string | null; nombre_proveedor: string | null; precio_lista: number | null; proveedores: number; exclusivo: boolean;
   agotados_pendientes: number | null; en_compra_id: string | null; en_compra_numero: number | null; en_esta_compra: boolean; total: number;
 }
-export interface Elegido { item_id: number; nombre: string; cantidad: string }
+export interface Elegido { item_id: number; nombre: string; cantidad: string; linea: string | null }
+export interface ContextoSeleccion { lineas: string[]; proveedor: string | null }
 const POR_PAGINA = 100;
 
 /**
@@ -26,7 +26,7 @@ const POR_PAGINA = 100;
  */
 export default function SelectorProductos({
   supabase, organizacionId, compraId = null, proveedorFijo = null, conProveedor = false, proveedorInicial = '', lineaInicial = '',
-  textoAceptar, onAceptar, onProveedorCambia,
+  textoAceptar, onAceptar, onProveedorCambia, onContexto,
 }: {
   supabase: SupabaseClient; organizacionId: string; compraId?: string | null;
   /** Catálogo de un proveedor concreto (no se puede cambiar). */
@@ -36,6 +36,8 @@ export default function SelectorProductos({
   textoAceptar: (n: number) => string;
   onAceptar: (items: { item_id: number; cantidad?: number }[], proveedor: number | null) => Promise<void> | void;
   onProveedorCambia?: (p: number | null) => void;
+  /** Avisa qué líneas y proveedor se están usando (para nombrar la compra sola). */
+  onContexto?: (c: ContextoSeleccion) => void;
 }) {
   const [texto, setTexto] = useState('');
   const [q, setQ] = useState('');
@@ -88,10 +90,10 @@ export default function SelectorProductos({
 
   const alternar = (f: FilaCatalogo) => {
     if (!seleccionable(f)) return;
-    setSel((s) => { const n = new Map(s); if (n.has(f.item_id)) n.delete(f.item_id); else n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: '' }); return n; });
+    setSel((s) => { const n = new Map(s); if (n.has(f.item_id)) n.delete(f.item_id); else n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: '', linea: f.linea }); return n; });
   };
   const ponerCantidad = (f: FilaCatalogo, valor: string) =>
-    setSel((s) => { const n = new Map(s); n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: valor }); return n; });
+    setSel((s) => { const n = new Map(s); n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: valor, linea: f.linea }); return n; });
 
   async function elegirTodos() {
     setOcupado(true);
@@ -99,7 +101,7 @@ export default function SelectorProductos({
     for (let off = 0; off < Math.min(total, 3000); off += 500) {
       const { data, error: e } = await supabase.rpc('compra_catalogo', filtro(500, off));
       if (e) { setError(textoError(e)); break; }
-      for (const f of (data ?? []) as FilaCatalogo[]) if (!f.en_compra_id && !n.has(f.item_id)) n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: '' });
+      for (const f of (data ?? []) as FilaCatalogo[]) if (!f.en_compra_id && !n.has(f.item_id)) n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: '', linea: f.linea });
     }
     setSel(n);
     setOcupado(false);
@@ -114,6 +116,16 @@ export default function SelectorProductos({
   const invalidas = elegidos.filter((e) => { const t = (e.cantidad.trim() !== '' ? e.cantidad : defecto).trim(); return t !== '' && cantidadDe(e) === undefined; });
   const sinCantidad = elegidos.filter((e) => cantidadDe(e) === undefined && invalidas.indexOf(e) < 0).length;
   const nombresChips = useMemo(() => elegidos.slice(0, 14), [elegidos]);
+  const claveContexto = `${[...new Set(elegidos.map((e) => e.linea ?? 'Sin línea'))].sort().join('|')}#${linea}#${provId ?? ''}`;
+  useEffect(() => {
+    if (!onContexto) return;
+    const deElegidos = [...new Set(elegidos.map((e) => e.linea ?? 'Sin línea'))].sort((a, b) => a.localeCompare(b, 'es'));
+    onContexto({
+      lineas: deElegidos.length > 0 ? deElegidos : linea ? [linea] : [],
+      proveedor: provId ? (provs.find((p) => p.valor === String(provId))?.texto ?? null) : null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveContexto, provs]);
 
   async function aceptar() {
     setOcupado(true);
@@ -125,7 +137,7 @@ export default function SelectorProductos({
   return (
     <div>
       <div className="mod-toolbar mod-toolbar--top">
-        <div className="ag-search" style={{ flex: '1 1 260px', maxWidth: 380 }}>
+        <div className="ag-search" style={{ flex: '1 1 300px', minWidth: 300, maxWidth: 400 }}>
           <input className="ui-input" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por código, nombre o referencia" aria-label="Buscar productos" autoFocus />
         </div>
         <SelectorLinea lineas={lineas} valor={linea} onCambio={(v) => { setLinea(v); setPagina(0); }} />
@@ -135,7 +147,7 @@ export default function SelectorProductos({
         )}
         <label className="mod-flex mod-gap-1 mod-center mod-text"><input type="checkbox" checked={exclusivos} onChange={(e) => { setExclusivos(e.target.checked); setPagina(0); }} /> Solo los de un único proveedor</label>
         <label className="mod-text">Cantidad por defecto{' '}
-          <input className="ui-input ui-input--sm" style={{ width: 84 }} inputMode="decimal" value={defecto} placeholder="opcional" onChange={(e) => setDefecto(e.target.value)} aria-label="Cantidad por defecto" />
+          <input className="ui-input ui-input--sm" style={{ width: 110 }} inputMode="decimal" value={defecto} placeholder="opcional" onChange={(e) => setDefecto(e.target.value)} aria-label="Cantidad por defecto" />
         </label>
       </div>
 
@@ -147,7 +159,7 @@ export default function SelectorProductos({
         <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" disabled={ocupado || elegidos.length === 0 || invalidas.length > 0} onClick={aceptar}>{textoAceptar(elegidos.length)}</button>
       </div>
       {elegidos.length > 0 && (
-        <div className="mod-flex mod-gap-1 mod-wrap mod-mb-2">
+        <div className="mod-flex mod-gap-1 mod-wrap mod-mb-2" style={{ maxHeight: '4.25rem', overflowY: 'auto' }}>
           {nombresChips.map((e) => (
             <span key={e.item_id} className="pm-chip">{e.nombre}{cantidadDe(e) !== undefined ? ` · ${cantidadDe(e)}` : ''} <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" aria-label={`Quitar ${e.nombre}`} onClick={() => setSel((s) => { const n = new Map(s); n.delete(e.item_id); return n; })}>×</button></span>
           ))}
@@ -158,12 +170,12 @@ export default function SelectorProductos({
       {invalidas.length > 0 && <p className="mod-error">Hay cantidades que no son un número mayor que cero.</p>}
       {error && <p className="mod-error">{error}</p>}
 
-      <TablaExcel clave="pedidos-selector" etiqueta="Catálogo de productos">
+      <div className="pm-tabla-selector">
         <table className="mod-table">
           <thead>
             <tr>
-              <th className="mod-check"><input type="checkbox" tabIndex={-1} checked={todasVisibles} disabled={visibles.length === 0} aria-label="Elegir todos los de esta página"
-                onChange={(e) => setSel((s) => { const n = new Map(s); visibles.forEach((f) => { if (e.target.checked) { if (!n.has(f.item_id)) n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: '' }); } else n.delete(f.item_id); }); return n; })} /></th>
+              <th className="pm-ck"><input type="checkbox" tabIndex={-1} checked={todasVisibles} disabled={visibles.length === 0} aria-label="Elegir todos los de esta página"
+                onChange={(e) => setSel((s) => { const n = new Map(s); visibles.forEach((f) => { if (e.target.checked) { if (!n.has(f.item_id)) n.set(f.item_id, { item_id: f.item_id, nombre: f.nombre_base, cantidad: '', linea: f.linea }); } else n.delete(f.item_id); }); return n; })} /></th>
               <th>Ítem</th><th>Producto</th><th>Línea</th><th>Ref. proveedor</th><th>Precio ERP</th><th>Cantidad</th><th>Estado</th>
             </tr>
           </thead>
@@ -173,7 +185,7 @@ export default function SelectorProductos({
               const bloqueada = !seleccionable(f);
               return (
                 <tr key={f.item_id} className={`${on ? 'is-selected ' : ''}${bloqueada ? 'is-faded' : 'is-clickable'}`} onClick={() => alternar(f)}>
-                  <td className="mod-check" onClick={(e) => e.stopPropagation()}>
+                  <td className="pm-ck" onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" tabIndex={-1} checked={on} disabled={bloqueada} onChange={() => alternar(f)} aria-label={`Elegir ${f.nombre_base}`} />
                   </td>
                   <td><b>{idVisible(f.item_id, false, f.codigo)}</b></td>
@@ -205,8 +217,8 @@ export default function SelectorProductos({
             {filas.length === 0 && <tr><td colSpan={8}>No hay productos con ese filtro.</td></tr>}
           </tbody>
         </table>
-      </TablaExcel>
-      <div className="mod-pager">
+      </div>
+      <div className="mod-pager pm-pager-selector">
         <button disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
         <span>Página {pagina + 1} de {Math.max(1, Math.ceil(total / POR_PAGINA))} ({total} productos)</span>
         <button disabled={(pagina + 1) * POR_PAGINA >= total} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>

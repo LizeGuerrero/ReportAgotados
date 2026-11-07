@@ -65,3 +65,24 @@ export function colorDias(dias: number): ColorCelda | null {
     textoRgb,
   };
 }
+
+// Degradado continuo blanco -> rojo, proporcional a los días (como una escala de color de Excel).
+const BLANCO: RGB = [255, 255, 255];
+const ROJO_FUERTE: RGB = [205, 0, 0];
+
+/**
+ * Color «relativo»: el más vencido de los que se están viendo (`maximo`) queda en el rojo más fuerte y 0 días en blanco;
+ * el resto queda proporcional. `minimoEscala` evita que 2 o 3 días de atraso se pinten como una emergencia.
+ */
+export function colorDiasRelativo(dias: number, maximo: number, minimoEscala = 10): ColorCelda | null {
+  if (!(dias > 0)) return null;
+  const t = Math.min(1, dias / Math.max(maximo, minimoEscala));
+  const rgb = [0, 1, 2].map((j) => Math.round(BLANCO[j] + (ROJO_FUERTE[j] - BLANCO[j]) * t)) as RGB;
+  const textoRgb = contraste(rgb, TEXTO_OSCURO) >= contraste(rgb, TEXTO_CLARO) ? TEXTO_OSCURO : TEXTO_CLARO;
+  return {
+    fondo: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
+    texto: `rgb(${textoRgb[0]}, ${textoRgb[1]}, ${textoRgb[2]})`,
+    rgb,
+    textoRgb,
+  };
+}

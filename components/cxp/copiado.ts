@@ -52,3 +52,10 @@ export function copiarValor(n: number, modo: ModoCopiado): Promise<void> {
   const t = textoDeValor(n, modo);
   return copiarAlPortapapeles(Promise.resolve({ html: t, texto: t }));
 }
+
+const escaparHtml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** Copia un texto de celda al portapapeles (texto plano, sin formato de tabla). */
+export function copiarTexto(texto: string): Promise<void> {
+  return copiarAlPortapapeles(Promise.resolve({ html: escaparHtml(texto), texto }));
+}

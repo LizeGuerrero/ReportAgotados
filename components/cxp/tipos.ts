@@ -29,6 +29,11 @@ export interface FilaCxp {
   nota_regla: string | null;
   /** Documento del ERP que no vino en la última carga. */
   ausente: boolean;
+  /** La fecha se corrigió a mano al cargar el ERP (se muestra con «*»); *_erp es lo que trae el ERP. */
+  dcto_corregido: boolean;
+  vcto_corregido: boolean;
+  dcto_erp: string | null;
+  vcto_erp: string | null;
   total: number;
 }
 

@@ -52,6 +52,7 @@ export function normalizarPrefsHoja(crudo: unknown, defecto: PrefsHoja): PrefsHo
     orden: lista(p.orden, []),
     verTramos: typeof p.verTramos === 'boolean' ? p.verTramos : true,
     clicFila: typeof p.clicFila === 'boolean' ? p.clicFila : true,
+    escalaDias: p.escalaDias === 'fija' ? 'fija' : 'relativa',
   };
 }
 
