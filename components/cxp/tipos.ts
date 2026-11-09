@@ -34,6 +34,8 @@ export interface FilaCxp {
   vcto_corregido: boolean;
   dcto_erp: string | null;
   vcto_erp: string | null;
+  /** Con la búsqueda en modo «ordenar»: la fila coincide con lo buscado. */
+  coincide: boolean;
   total: number;
 }
 

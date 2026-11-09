@@ -273,8 +273,13 @@ export default function HojaTabla<T>({
     const v = c.copia?.(f);
     return v === null || v === undefined ? undefined : String(Math.sign(v) * Math.round(Math.abs(v)) || 0);
   };
-  const estiloFijo = (c: ColumnaHoja<T>) =>
-    izquierda[c.clave] !== undefined ? { left: izquierda[c.clave] } : derecha[c.clave] !== undefined ? { right: derecha[c.clave] } : undefined;
+  // «sticky» va también en línea: no depende de que ninguna otra regla de CSS lo pise (p. ej. en Pagados).
+  const estiloFijo = (c: ColumnaHoja<T>): React.CSSProperties | undefined =>
+    izquierda[c.clave] !== undefined
+      ? { position: 'sticky', left: izquierda[c.clave] }
+      : derecha[c.clave] !== undefined
+        ? { position: 'sticky', right: derecha[c.clave] }
+        : undefined;
   const claseColumna = (c: ColumnaHoja<T>, extra = '') =>
     [
       c.alinear === 'der' ? 'cxp-num' : '',

@@ -8,6 +8,7 @@ import {
   MAX_CONGELAR_DER,
   MAX_FILAS_INFINITO,
   OPCIONES_POR_PAGINA,
+  ORDENES_RESTO,
   aplicarOrden,
   type AjusteTexto,
   type Alineacion,
@@ -15,15 +16,17 @@ import {
   type Densidad,
   type GrupoHoja,
   type ModoCopiado,
+  type OrdenResto,
   type PrefsGeneral,
   type PrefsHoja,
 } from './tipos';
 
-type Seccion = 'columnas' | 'porcolumna' | 'formato' | 'fijas' | 'copiado' | 'restablecer';
+type Seccion = 'columnas' | 'porcolumna' | 'formato' | 'busqueda' | 'fijas' | 'copiado' | 'restablecer';
 const SECCIONES: { clave: Seccion; titulo: string }[] = [
   { clave: 'columnas', titulo: 'Columnas visibles y orden' },
   { clave: 'porcolumna', titulo: 'Ajustes por columna' },
   { clave: 'formato', titulo: 'Formato y presentación' },
+  { clave: 'busqueda', titulo: 'Búsqueda' },
   { clave: 'fijas', titulo: 'Columnas fijas' },
   { clave: 'copiado', titulo: 'Copiado de valores' },
   { clave: 'restablecer', titulo: 'Restablecer' },
@@ -315,6 +318,27 @@ export default function PanelConfiguracion({
                     )}
                   </fieldset>
                 )}
+              </>
+            )}
+
+            {seccion === 'busqueda' && (
+              <>
+                <fieldset className="cxp-panel__grupo">
+                  <legend>Qué hace la barra de búsqueda</legend>
+                  {radio<PrefsHoja['busqueda']>('busqueda', 'filtrar', prefs.busqueda, 'Filtrar: muestra solo lo que coincide', (v) => onPrefs({ ...prefs, busqueda: v }))}
+                  {radio<PrefsHoja['busqueda']>('busqueda', 'ordenar', prefs.busqueda, 'Ordenar: lo que coincide va arriba y no se oculta nada', (v) => onPrefs({ ...prefs, busqueda: v }))}
+                </fieldset>
+                <fieldset className="cxp-panel__grupo" disabled={prefs.busqueda !== 'ordenar'}>
+                  <legend>Con «Ordenar»: qué va debajo de lo que coincide</legend>
+                  {ORDENES_RESTO.map((o) =>
+                    radio<OrdenResto>('ordenResto', o.valor, prefs.ordenResto, o.texto, (v) => onPrefs({ ...prefs, ordenResto: v })),
+                  )}
+                  {prefs.busqueda !== 'ordenar' && <p className="ui-hint">Activa «Ordenar» para elegir esto.</p>}
+                </fieldset>
+                <p className="ui-hint">
+                  Con «Ordenar», los totales de arriba siguen mostrando todo (la búsqueda ya no oculta documentos) y una línea separa lo que
+                  coincide del resto. Si eliges ordenar por una columna, lo que coincide sigue arriba y esa columna ordena dentro de cada parte.
+                </p>
               </>
             )}
 

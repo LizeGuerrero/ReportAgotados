@@ -101,3 +101,40 @@ Sin ejecutar: interfaz, la migración y la creación real en Proveedores.
 **Decisiones abiertas**
 1. Solo se corrigen fechas (documento y vencimiento). Otros campos del ERP no.
 2. No se pueden corregir fechas de documentos ya cargados desde la propia cartera (esa edición sigue bloqueada para filas del ERP): se corrige al volver a cargar el archivo.
+
+---
+# Adenda 3 (6/11/2026): carga visible, colores, botones, búsqueda que ordena y totales por proveedor
+
+## 1 y 2. «Cargando…» al cambiar de pestaña
+- Cada pestaña (Cartera, Excluidas, Pagados, Reglas, Cargar archivo, Mensajes) muestra un indicador giratorio y una barra animada **mientras se navega hacia ella**, y avisa a lectores de pantalla («Cargando …»). Usa `useLinkStatus` de `next/link` (no pude verificar la API contra tu versión instalada: no hay `node_modules` aquí).
+- Se agregaron pantallas de espera (`loading.tsx` en cxp, cxp-pagados, cxp-reglas, cxp-cargar, cxp-mensajes; la de `cxp` cubre también Excluidas) con un mensaje y un esqueleto. Mientras se muestran, las pestañas no están a la vista (están dentro de cada página, no en un layout).
+- La tabla muestra una barra animada arriba y cursor de espera mientras trae datos.
+
+## 2 (colores). Fila seleccionada y pendientes manuales ilegibles
+Causa: la app tiene modo oscuro y su texto es claro, pero el amarillo de selección y el azul de «manual» eran colores fijos pálidos: texto claro sobre fondo claro. Ahora fondo **y** texto se definen juntos para cada tema (claro: amarillo/azul con texto casi negro; oscuro: ámbar/azul oscuros con texto claro), y el contenido de las celdas hereda ese color.
+
+## 3. Botones
+- Tamaños y espacios coherentes (clase `cxp-btn`), iconos en Configuración / Totales / Agregar, herramientas agrupadas en un solo bloque, paginador con ‹ ›, franja inferior en grupos separados por una línea (copiar/limpiar a la izquierda; excluir/pagar a la derecha), acciones de cada fila pequeñas y parejas. «Cruzar con ERP» ahora dice «Cruzar» (el aviso largo sigue como tooltip).
+- Es una propuesta de presentación sin haberla visto en pantalla: conviene revisarla y ajustar tamaños.
+
+## 4. Columnas fijas en Pagados
+**No pude reproducir ni encontrar la causa leyendo el código** (Pagados usa la misma tabla y las mismas preferencias que Cartera). Hice un refuerzo: la fijación (`position: sticky` + `left/right`) ahora va en el propio elemento y no depende de ninguna regla de CSS. Si sigue sin funcionar, dime qué ves: una causa posible es que la tabla de Pagados no tenga desplazamiento horizontal (si todas las columnas caben en la pantalla, no hay nada que fijar).
+
+## 5. La búsqueda puede ORDENAR en vez de filtrar
+- Configuración › **Búsqueda**: «Filtrar» (como antes, predeterminado) u «Ordenar» (nada se oculta; lo que coincide va arriba, con una barra azul a la izquierda y una línea que separa el resto). Con «Ordenar» se elige qué va debajo:
+  1. Coincidencias · luego el resto de lo **vencido** (el más atrasado primero) · luego lo demás por vencimiento.
+  2. Coincidencias · luego todo por vencimiento.
+  3. Coincidencias · luego todo por nombre del proveedor.
+- Si se ordena por una columna, las coincidencias siguen arriba y esa columna ordena dentro de cada parte. Los totales de arriba siguen mostrando todo.
+- Es del lado del servidor (paginación correcta): `cxp_listar` recibe `p_busqueda_modo` y `p_orden_resto` y devuelve `coincide`. Para añadir más criterios basta con agregar una opción en `ORDENES_RESTO` y su caso en esa función.
+
+## 6. Ventana flotante de totales por proveedor
+- Botón «Totales por proveedor» en la barra. Ventana **dentro de la página** (no otra ventana del navegador): se arrastra por el título, se redimensiona por la esquina, se mueve con flechas del teclado (Mayús + flechas cambia el tamaño; Esc cierra) y **recuerda su lugar y tamaño por usuario**.
+- Pestañas: «Seleccionados» (suma por proveedor de lo marcado, incluso lo que el filtro oculta) y «Todo lo filtrado» (consulta nueva `cxp_totales_proveedor`, con los mismos filtros que los totales de arriba). Columnas Docs / Vencido / Total ordenables, total general al pie, clic en un total lo copia (formato de Configuración).
+- Una ventana de navegador separada es posible (`window.open`), pero no comparte el estado de la pantalla y los bloqueadores de ventanas emergentes la estorban; por eso se hizo flotante en la página.
+
+## Archivos
+Nuevos: `components/cxp/VentanaTotales.tsx`, `components/cxp/CxpCargando.tsx`, 5 × `loading.tsx`, `supabase/migrations/20261105000100_cxp_busqueda_ordenar_y_totales.sql`, `tests/db/12_cxp_busqueda_totales.sql`.
+Modificados: `CxpCartera.tsx`, `CxpTabs.tsx`, `tipos.ts`, `hoja/HojaTabla.tsx`, `hoja/PanelConfiguracion.tsx`, `hoja/tipos.ts`, `hoja/usePrefsHoja.ts`, `styles/cxp.css`, `tests/db/run.sh`.
+
+**Sin ejecutar** (sin Postgres ni navegador aquí): la migración y la suite 12, la interfaz, el arrastre/redimensión de la ventana y los indicadores de carga. Antes de desplegar aplica las migraciones en orden y corre `bash tests/db/run.sh schema.sql` (comprueba también las suites 06–11). Verifiqué solo sintaxis y tipos aproximados.

@@ -1,4 +1,6 @@
-import Link from 'next/link';
+'use client';
+
+import Link, { useLinkStatus } from 'next/link';
 
 export type PestanaCxp = 'cartera' | 'excluidas' | 'pagados' | 'reglas' | 'cargar' | 'mensajes';
 
@@ -8,6 +10,18 @@ export interface PermisosTabsCxp {
   cxpReglas: boolean;
   cxpImportar: boolean;
   cxpMensajes: boolean;
+}
+
+/** Se pinta dentro de cada pestaña: gira mientras se navega hacia ella y avisa a lectores de pantalla. */
+function Estado({ texto }: { texto: string }) {
+  const { pending } = useLinkStatus();
+  return (
+    <>
+      {pending && <span className="cxp-spinner" aria-hidden="true" />}
+      {texto}
+      {pending && <span className="cxp-vh" role="status"> Cargando {texto}…</span>}
+    </>
+  );
 }
 
 /** Pestañas de la aplicación de Cuentas por pagar. Solo muestra lo que el usuario puede ver. */
@@ -41,7 +55,7 @@ export function CxpTabs({
           className={t.clave === activa ? 'cxp-tab is-active' : 'cxp-tab'}
           aria-current={t.clave === activa ? 'page' : undefined}
         >
-          {t.texto}
+          <Estado texto={t.texto} />
         </Link>
       ))}
     </nav>

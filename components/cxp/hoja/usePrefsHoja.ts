@@ -53,13 +53,21 @@ export function normalizarPrefsHoja(crudo: unknown, defecto: PrefsHoja): PrefsHo
     verTramos: typeof p.verTramos === 'boolean' ? p.verTramos : true,
     clicFila: typeof p.clicFila === 'boolean' ? p.clicFila : true,
     escalaDias: p.escalaDias === 'fija' ? 'fija' : 'relativa',
+    busqueda: p.busqueda === 'ordenar' ? 'ordenar' : 'filtrar',
+    ordenResto: p.ordenResto === 'nombre' || p.ordenResto === 'vencimiento' ? p.ordenResto : 'vencidos',
   };
 }
 
 export function normalizarPrefsGeneral(crudo: unknown, defecto: PrefsGeneral): PrefsGeneral {
   if (!crudo || typeof crudo !== 'object') return defecto;
   const p = crudo as Partial<PrefsGeneral>;
-  return { v: 1, copiado: p.copiado === 'moneda' ? 'moneda' : p.copiado === 'entero' ? 'entero' : defecto.copiado };
+  const g = p.ventanaTotales;
+  const ok = g && [g.x, g.y, g.w, g.h].every((n) => typeof n === 'number' && Number.isFinite(n)) && g.w >= 280 && g.h >= 160;
+  return {
+    v: 1,
+    copiado: p.copiado === 'moneda' ? 'moneda' : p.copiado === 'entero' ? 'entero' : defecto.copiado,
+    ...(ok ? { ventanaTotales: { x: Math.round(g.x), y: Math.round(g.y), w: Math.round(g.w), h: Math.round(g.h) } } : {}),
+  };
 }
 
 function leerLocal(clave: string): unknown {

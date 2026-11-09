@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import ReporteAgotados from '@/components/ReporteAgotados';
 import { obtenerContextoOrg } from '@/lib/orgContext';
+// Estilos propios del espacio de trabajo de AGOTADOS (prefijo agx-). No reemplazan a agotados.css, que otros módulos aún usan.
+import '@/styles/agotados-hoja.css';
 
 export const metadata = { title: 'Agotados' };
 
@@ -12,13 +14,10 @@ export default async function AgotadosPage({ params }: { params: Promise<{ slug:
     return <main className="ag-page"><h1 className="mod-title">No tienes permiso para consultar Agotados.</h1></main>;
   }
 
+  // El título y la descripción del módulo viven ahora en la franja superior del espacio de trabajo.
   return (
-    <main className="ag-page">
-      <div className="ag-head">
-        <h1 className="ag-title">Reporte de agotados</h1>
-        <p className="ag-lead">Busca un ítem, márcalo como agotado y solicita el pedido a Compras.</p>
-      </div>
-      <ReporteAgotados organizacionId={ctx.organizacion.id} />
+    <main className="agx-page">
+      <ReporteAgotados organizacionId={ctx.organizacion.id} usuarioId={ctx.usuarioId} />
     </main>
   );
 }

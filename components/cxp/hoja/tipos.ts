@@ -2,6 +2,12 @@ import type { CSSProperties, ReactNode } from 'react';
 
 export type AjusteTexto = 'puntos' | 'cortar' | 'ajustar';
 export type Alineacion = 'izq' | 'centro' | 'der';
+export type OrdenResto = 'vencidos' | 'vencimiento' | 'nombre';
+export const ORDENES_RESTO: { valor: OrdenResto; texto: string }[] = [
+  { valor: 'vencidos', texto: 'Lo que coincide arriba · luego el resto de lo vencido (el más atrasado primero) · luego lo demás por fecha de vencimiento' },
+  { valor: 'vencimiento', texto: 'Lo que coincide arriba · luego todo lo demás por fecha de vencimiento' },
+  { valor: 'nombre', texto: 'Lo que coincide arriba · luego todo lo demás por nombre del proveedor' },
+];
 export type Densidad = 'compacta' | 'normal' | 'amplia';
 
 /** Máximo de filas en pantalla con scroll infinito: protege el rendimiento de la base y del navegador. */
@@ -67,6 +73,10 @@ export interface PrefsHoja {
   clicFila: boolean;
   /** Escala del color de «Días venc.»: relativa a lo que se ve (blanco → rojo) o fija en 90 días. */
   escalaDias: 'relativa' | 'fija';
+  /** Qué hace la búsqueda: filtrar (oculta lo que no coincide) u ordenar (lo que coincide arriba, nada se oculta). */
+  busqueda: 'filtrar' | 'ordenar';
+  /** Con «ordenar»: cómo se ordena lo que NO coincide. */
+  ordenResto: OrdenResto;
 }
 
 export function prefsPorDefecto(ocultas: string[] = []): PrefsHoja {
@@ -87,13 +97,23 @@ export function prefsPorDefecto(ocultas: string[] = []): PrefsHoja {
     verTramos: true,
     clicFila: true,
     escalaDias: 'relativa',
+    busqueda: 'filtrar',
+    ordenResto: 'vencidos',
   };
 }
 
 /** Preferencias de CXP que no dependen de la pantalla (valen para Cartera, Excluidas y Pagados). */
 export type ModoCopiado = 'entero' | 'moneda';
+/** Posición y tamaño de la ventana flotante de totales por proveedor (en píxeles de la pantalla). */
+export interface GeometriaVentana {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 export interface PrefsGeneral {
   v: 1;
+  ventanaTotales?: GeometriaVentana;
   /** entero: «1500000» · moneda: «$ 1.500.000» (lo que se ve en pantalla). */
   copiado: ModoCopiado;
 }

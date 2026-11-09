@@ -14,6 +14,7 @@ import MensajesProveedor from './MensajesProveedor';
 import FormPendiente from './FormPendiente';
 import HojaTabla from './hoja/HojaTabla';
 import PanelConfiguracion from './hoja/PanelConfiguracion';
+import VentanaTotales from './VentanaTotales';
 import { MAX_FILAS_INFINITO, prefsPorDefecto, type ColumnaHoja, type GrupoHoja, type PrefsHoja } from './hoja/tipos';
 import { usePrefsGeneral, usePrefsHoja } from './hoja/usePrefsHoja';
 import { copiarValor } from './copiado';
@@ -99,6 +100,7 @@ export default function CxpCartera({
   const [mensajes, setMensajes] = useState<{ filas: FilaCxp[] } | null>(null);
   const [exclSel, setExclSel] = useState<FilaCxp[] | null>(null);
   const [configurando, setConfigurando] = useState(false);
+  const [ventanaTotales, setVentanaTotales] = useState(false);
   // Saldo del banco para el análisis de pagos: opcional y solo de cálculo (no se guarda ni toca ningún registro).
   const [saldoTxt, setSaldoTxt] = useState('');
   const ultimaMarcada = useRef<string | null>(null);
@@ -171,26 +173,31 @@ export default function CxpCartera({
   }, [filas]);
 
   // Filtros comunes (los totales no usan el de vencimiento: siempre muestran todos los tramos).
+  // Con la búsqueda en modo «ordenar» nada se oculta: los totales y la lista base no llevan el texto (la lista lo recibe aparte).
+  const ranking = prefs.busqueda === 'ordenar';
   const comunes = useMemo(
     () => ({
       p_org: organizacionId,
       p_estado: estado,
-      p_busqueda: busqueda.trim() || null,
+      p_busqueda: ranking ? null : busqueda.trim() || null,
       p_tercero: filtroProveedor.p_tercero,
       p_nombre: filtroProveedor.p_nombre,
       p_sede: sede || null,
       p_origen: origen || null,
     }),
-    [organizacionId, estado, busqueda, filtroProveedor, sede, origen],
+    [organizacionId, estado, busqueda, ranking, filtroProveedor, sede, origen],
   );
   const parametrosLista = useMemo(
     () => ({
       ...comunes,
+      p_busqueda: busqueda.trim() || null,
+      p_busqueda_modo: prefs.busqueda,
+      p_orden_resto: prefs.ordenResto,
       p_vencimiento: vencimiento || null,
       p_orden: orden?.clave ?? null,
       p_dir: orden?.dir ?? 'asc',
     }),
-    [comunes, vencimiento, orden],
+    [comunes, busqueda, prefs.busqueda, prefs.ordenResto, vencimiento, orden],
   );
 
   const cargarListas = useCallback(async () => {
@@ -321,7 +328,7 @@ export default function CxpCartera({
   }
 
   function cambiarPrefs(p: PrefsHoja) {
-    if (p.modo !== prefs.modo || p.porPagina !== prefs.porPagina) setPagina(0);
+    if (p.modo !== prefs.modo || p.porPagina !== prefs.porPagina || p.busqueda !== prefs.busqueda || p.ordenResto !== prefs.ordenResto) setPagina(0);
     cambiar(p);
   }
 
@@ -419,6 +426,16 @@ export default function CxpCartera({
     });
     return t;
   }, [seleccion]);
+
+  // Con la búsqueda en modo «ordenar»: la primera fila que ya no coincide lleva una línea que separa «lo buscado» del resto.
+  const idPrimeraResto = useMemo(() => {
+    if (!ranking || !busqueda.trim()) return null;
+    const i = filas.findIndex((f, k) => k > 0 && !f.coincide && filas[k - 1].coincide);
+    return i > 0 ? filas[i].id : null;
+  }, [ranking, busqueda, filas]);
+  const nCoinciden = ranking && busqueda.trim() ? filas.filter((f) => f.coincide).length : 0;
+
+  const seleccionLista = useMemo(() => Array.from(seleccion.values()), [seleccion]);
 
   // Seleccionadas que ahora no se ven por el filtro o la página (siguen contando en el total).
   const fueraDeVista = useMemo(() => {
@@ -612,7 +629,7 @@ export default function CxpCartera({
       )}
       {esPend && f.origen === 'manual' && permisos.editar && (
         <button type="button" className="ui-btn ui-btn--sm" onClick={() => setCruces({ manual: f })} title="Es la misma cuenta que un documento del ERP">
-          Cruzar con ERP
+          Cruzar
         </button>
       )}
       {esPend && f.origen === 'manual' && permisos.eliminar && (
@@ -746,12 +763,22 @@ export default function CxpCartera({
           </div>
 
           <div className="cxp-barra__botones">
-            <button type="button" className="ui-btn" onClick={() => setConfigurando(true)} aria-haspopup="dialog">
-              Configuración
-            </button>
+            {ranking && busqueda.trim() && (
+              <span className="cxp-barra__nota" role="status">
+                {nCoinciden} coincidencia(s) arriba
+              </span>
+            )}
+            <div className="cxp-grupo-btn" role="group" aria-label="Herramientas">
+              <button type="button" className="ui-btn cxp-btn" onClick={() => setVentanaTotales((v) => !v)} aria-pressed={ventanaTotales} title="Total a pagar por proveedor (ventana flotante)">
+                <IconoTotales /> Totales por proveedor
+              </button>
+              <button type="button" className="ui-btn cxp-btn" onClick={() => setConfigurando(true)} aria-haspopup="dialog">
+                <IconoConfig /> Configuración
+              </button>
+            </div>
             {esPend && permisos.crear && (
-              <button type="button" className="ui-btn ui-btn--primary" onClick={() => setFormulario({ editar: null })}>
-                + Agregar pendiente
+              <button type="button" className="ui-btn ui-btn--primary cxp-btn" onClick={() => setFormulario({ editar: null })}>
+                <IconoMas /> Agregar pendiente
               </button>
             )}
           </div>
@@ -764,7 +791,11 @@ export default function CxpCartera({
         grupos={grupos}
         filas={filas}
         idFila={(f) => f.id}
-        claseFila={(f) => (f.origen === 'manual' ? 'cxp-row--manual' : undefined)}
+        claseFila={(f) =>
+          [f.origen === 'manual' ? 'cxp-row--manual' : '', ranking && f.coincide ? 'cxp-row--coincide' : '', f.id === idPrimeraResto ? 'cxp-row--sep' : '']
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
         prefs={prefs}
         onPrefs={cambiarPrefs}
         orden={orden}
@@ -782,7 +813,7 @@ export default function CxpCartera({
         hayMas={hayMas}
         alCentinela={infinito ? cargarMas : undefined}
         modoCopiado={general.prefs.copiado}
-        reinicio={`${busqueda}|${proveedor}|${sede}|${origen}|${vencimiento}|${orden?.clave ?? ''}${orden?.dir ?? ''}|${pagina}|${infinito}|${lote}`}
+        reinicio={`${busqueda}|${prefs.busqueda}|${prefs.ordenResto}|${proveedor}|${sede}|${origen}|${vencimiento}|${orden?.clave ?? ''}${orden?.dir ?? ''}|${pagina}|${infinito}|${lote}`}
       />
 
       {/* ===== Franja inferior: análisis de pagos (solo cálculo), acciones sobre la selección y paginador ===== */}
@@ -824,27 +855,31 @@ export default function CxpCartera({
               </>
             )}
             {nSel > 0 && (
-              <>
-                <button type="button" className="ui-btn ui-btn--sm" onClick={copiarTotal} title="Copia el total seleccionado con el formato elegido en Configuración">
-                  {copiado ? 'Copiado' : 'Copiar total'}
+              <div className="cxp-analisis__grupo" role="group" aria-label="Sobre la selección">
+                <button type="button" className="ui-btn ui-btn--sm cxp-btn" onClick={copiarTotal} title="Copia el total seleccionado con el formato elegido en Configuración">
+                  {copiado ? '✓ Copiado' : 'Copiar total'}
                 </button>
-                <button type="button" className="ui-btn ui-btn--sm" onClick={() => setSeleccion(new Map())}>Limpiar selección</button>
-              </>
+                <button type="button" className="ui-btn ui-btn--sm cxp-btn" onClick={() => setSeleccion(new Map())}>Limpiar</button>
+              </div>
             )}
-            {nSel > 0 && esPend && permisos.pagar && (
-              <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => pedirPago(Array.from(seleccion.values()))}>
-                Marcar como pagados
-              </button>
-            )}
-            {nSel > 0 && esPagados && (
-              <button type="button" className="ui-btn ui-btn--sm ui-btn--primary" onClick={() => setMensajes({ filas: Array.from(seleccion.values()) })}>
-                Armar mensaje para los proveedores
-              </button>
-            )}
-            {nSel > 0 && esPend && permisos.excluir && (
-              <button type="button" className="ui-btn ui-btn--sm" onClick={() => setExclSel(Array.from(seleccion.values()))} title="Dejar fuera de la cartera los documentos seleccionados">
-                Excluir selección
-              </button>
+            {nSel > 0 && (
+              <div className="cxp-analisis__grupo cxp-analisis__grupo--acciones" role="group" aria-label="Acciones sobre la selección">
+                {esPend && permisos.excluir && (
+                  <button type="button" className="ui-btn ui-btn--sm cxp-btn" onClick={() => setExclSel(Array.from(seleccion.values()))} title="Dejar fuera de la cartera los documentos seleccionados">
+                    Excluir selección
+                  </button>
+                )}
+                {esPend && permisos.pagar && (
+                  <button type="button" className="ui-btn ui-btn--sm ui-btn--primary cxp-btn" onClick={() => pedirPago(Array.from(seleccion.values()))}>
+                    Marcar como pagados
+                  </button>
+                )}
+                {esPagados && (
+                  <button type="button" className="ui-btn ui-btn--sm ui-btn--primary cxp-btn" onClick={() => setMensajes({ filas: Array.from(seleccion.values()) })}>
+                    Armar mensaje para los proveedores
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -866,13 +901,26 @@ export default function CxpCartera({
           ) : (
             <>
               <span>{cargando ? 'Cargando…' : `${total} documento(s)`}</span>
-              <button type="button" className="ui-btn ui-btn--sm" disabled={pagina === 0 || cargando} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
+              <button type="button" className="ui-btn ui-btn--sm cxp-btn" disabled={pagina === 0 || cargando} onClick={() => setPagina((p) => p - 1)}>‹ Anterior</button>
               <span>Pág. {pagina + 1}/{paginas}</span>
-              <button type="button" className="ui-btn ui-btn--sm" disabled={pagina + 1 >= paginas || cargando} onClick={() => setPagina((p) => p + 1)}>Siguiente</button>
+              <button type="button" className="ui-btn ui-btn--sm cxp-btn" disabled={pagina + 1 >= paginas || cargando} onClick={() => setPagina((p) => p + 1)}>Siguiente ›</button>
             </>
           )}
         </div>
       </div>
+
+      {ventanaTotales && (
+        <VentanaTotales
+          supabase={supabase}
+          geometria={general.prefs.ventanaTotales}
+          onGeometria={(g) => general.cambiar({ ...general.prefs, ventanaTotales: g })}
+          seleccion={seleccionLista}
+          parametros={comunes}
+          claveFiltros={`${JSON.stringify(comunes)}|${totales.n_total}|${totales.suma_total}`}
+          modoCopiado={general.prefs.copiado}
+          onCerrar={() => setVentanaTotales(false)}
+        />
+      )}
 
       {configurando && (
         <PanelConfiguracion
@@ -1099,5 +1147,30 @@ function CeldaEditable({
         }
       }}
     />
+  );
+}
+
+function IconoMas() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconoConfig() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="10.5" cy="4.5" r="1.8" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="5.5" cy="11.5" r="1.8" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+function IconoTotales() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+      <rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M2 6.5h12M6 6.5v7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
   );
 }
